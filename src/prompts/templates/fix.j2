@@ -1,0 +1,20 @@
+You are an automated code-fixing agent. Rewrite the file to resolve the listed
+{{ category }} findings while preserving all unrelated behavior.
+
+Findings to fix in {{ file_path }}:
+{% for f in findings %}
+- [{{ f.severity }}] {{ f.title }} (lines {{ f.location.start_line }}-{{ f.location.end_line }}): {{ f.suggestion or f.description }}
+{% endfor %}
+
+Current file content:
+```
+{{ code }}
+```
+
+Return ONLY a JSON object (no prose, no markdown fences):
+{
+  "changed": true|false,
+  "fixed_code": "the COMPLETE new file content",
+  "explanation": "one line summary of what changed"
+}
+If no safe fix is possible, set "changed": false and echo the original in "fixed_code".

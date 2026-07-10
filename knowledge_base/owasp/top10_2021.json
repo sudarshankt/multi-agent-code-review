@@ -1,0 +1,90 @@
+[
+  {
+    "id": "A01:2021",
+    "name": "Broken Access Control",
+    "description": "Access control enforces policy such that users cannot act outside of their intended permissions. Failures typically lead to unauthorized information disclosure, modification, or destruction of all data or performing a business function outside the user's limits.",
+    "cwes": [22, 275, 276, 284, 285, 639, 942, 1275],
+    "prevention": [
+      "Deny by default",
+      "Implement access control checks on the server side",
+      "Use security logging and monitoring"
+    ]
+  },
+  {
+    "id": "A02:2021",
+    "name": "Cryptographic Failures",
+    "description": "Many web applications and APIs do not properly protect sensitive data. Attackers may steal or modify weakly protected data to conduct credit card fraud, identity theft, or other crimes.",
+    "cwes": [259, 327, 331, 335, 336, 916],
+    "prevention": [
+      "Use strong encryption algorithms",
+      "Use strong cryptographic keys",
+      "Protect data in transit and at rest"
+    ]
+  },
+  {
+    "id": "A03:2021",
+    "name": "Injection",
+    "description": "An application is vulnerable to attack when user-supplied data is not validated, filtered, or sanitized by the application. Injection flaws allow attackers to infer the structure of queries.",
+    "cwes": [74, 78, 79, 89, 90, 91, 93],
+    "prevention": [
+      "Use parameterized queries",
+      "Use allowlists for input validation",
+      "Escape special characters"
+    ]
+  },
+  {
+    "id": "A04:2021",
+    "name": "Insecure Design",
+    "description": "Insecure design is a broad category representing different weaknesses, expressed as missing or ineffective control design. Insecure design is not the source for all other Top 10 categories.",
+    "cwes": [209, 213, 285, 345, 346, 384, 400, 402, 566, 644, 912],
+    "prevention": [
+      "Threat modeling during design phase",
+      "Secure SDLC processes",
+      "User story security requirements"
+    ]
+  },
+  {
+    "id": "A05:2021",
+    "name": "Security Misconfiguration",
+    "description": "The application might be vulnerable if the application is missing appropriate security hardening across any part of the application stack, or if permissions on cloud services are improperly configured.",
+    "cwes": [2, 11, 13, 15, 16, 267, 432, 497, 541, 668, 706, 798],
+    "prevention": [
+      "Hardening guidelines for all platforms",
+      "Automated scanning of configurations",
+      "Minimize installation footprint"
+    ]
+  },
+  {
+    "id": "A06:2021",
+    "name": "Vulnerable and Outdated Components",
+    "description": "Components, such as libraries, frameworks, and other software modules, run with the same privileges as the application. If a vulnerable component is exploited, such an attack can facilitate serious data loss or server takeover.",
+    "cwes": [1035, 1104],
+    "prevention": [
+      "Track and audit component versions",
+      "Implement patches promptly",
+      "Remove unused dependencies"
+    ]
+  },
+  {
+    "id": "A07:2021",
+    "name": "Authentication and Session Management Failures",
+    "description": "Confirmation of the user's identity, authentication, and session management is critical to protect against authenticated attacks. May include password management, credential recovery, weak session identifiers, timeouts, remember me, forgot password, update profile, and other authentication-related concerns.",
+    "cwes": [255, 259, 613, 620, 640, 613, 798],
+    "prevention": [
+      "Implement multi-factor authentication",
+      "Implement secure password reset",
+      "Implement session timeout"
+    ]
+  },
+  {
+    "id": "A08:2021",
+    "name": "Software and Data Integrity Failures",
+    "description": "Software and data integrity failures relate to code and infrastructure that does not protect against integrity violations. An example of this is where an object or data structure is encoded or serialized into a structure that an attacker can see and modify is vulnerable to insecure deserialization.",
+    "cwes": [345, 353, 426, 502, 565, 784],
+    "prevention": [
+      "Use digital signatures to verify software source",
+      "Use secure CI/CD pipelines",
+      "Avoid serialization of sensitive data"
+    ]
+  }
+]

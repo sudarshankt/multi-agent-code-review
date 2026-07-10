@@ -1,0 +1,14 @@
+{# Shared JSON-output contract included by every analysis prompt. #}
+Respond with ONLY a JSON array (no prose, no markdown fences). Each element:
+{
+  "title": "short issue title",
+  "description": "what is wrong and why it matters",
+  "severity": "critical|high|medium|low|info",
+  "confidence": "high|medium|low",
+  "start_line": <int or null>,
+  "end_line": <int or null>,
+  "suggestion": "concrete fix",
+  "cwe_id": "CWE-XXX or null",
+  "references": ["url or identifier", ...]
+}
+If there are no issues, respond with [].

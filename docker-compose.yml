@@ -1,0 +1,30 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: cap-pr-review-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Optional external ChromaDB server. The app defaults to embedded mode
+  # (CHROMADB_MODE=embedded) and does not need this. Enable with:
+  #   docker compose --profile chromadb up -d
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: cap-pr-review-chromadb
+    profiles: ["chromadb"]
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+
+volumes:
+  redis-data:
+  chroma-data:

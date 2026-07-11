@@ -8,6 +8,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
+from src.core.config import get_settings
+from src.core.constants import SOURCE_EXTENSIONS
 from src.api.schemas.review import (
     CreateReviewRequest,
     ListReviewsResponse,
@@ -24,6 +26,13 @@ router = APIRouter()
 
 # In-memory review storage (MVP). In production, use a real database.
 _reviews: dict[str, Review] = {}
+
+
+def _is_eligible_source_file(path: str, ignore_paths: list[str]) -> bool:
+    if not path.endswith(SOURCE_EXTENSIONS):
+        return False
+    normalized = path.lower()
+    return not any(normalized.startswith(prefix.lower()) for prefix in ignore_paths)
 
 
 def _parse_pr_url(url: str) -> tuple[str, str, int] | None:
@@ -59,21 +68,25 @@ async def _run_review(review_id: str) -> None:
                 )
                 pr_info = pr_data["pr_info"]
                 files = pr_data["files"]
+                diffs = pr_data.get("diffs", {})
                 review.pr_info = pr_info
         else:
             files = {}  # Already have files from initial fetch.
+            diffs = {}
 
         # Run the orchestrator graph.
         graph = get_graph()
         input_state = {
             "pr_info": review.pr_info,
             "files": files,
+            "diffs": diffs,
             "review_id": review_id,
             "status": ReviewStatus.ANALYZING,
             "findings": [],
             "agent_results": {},
             "fix_results": [],
             "errors": [],
+            "files_bypassed": 0,
         }
         result = await graph.ainvoke(input_state)
 
@@ -142,6 +155,54 @@ async def create_review(req: CreateReviewRequest) -> ReviewResponse:
     pr_info = PRInfo(owner=owner, repo=repo, pr_number=pr_number)
     review = Review(pr_info=pr_info, triggered_by="api")
     _reviews[review.id] = review
+
+    settings = get_settings()
+    try:
+        async with GitHubService() as gh:
+            changed_files = await gh.get_pr_files(owner, repo, pr_number)
+    except Exception as exc:  # noqa: BLE001 - do not block review creation on preflight issues
+        logger.warning(
+            "preflight_fetch_failed",
+            review_id=review.id,
+            owner=owner,
+            repo=repo,
+            pr_number=pr_number,
+            error=str(exc),
+        )
+    else:
+        relevant_files = [
+            entry.get("filename", "")
+            for entry in changed_files
+            if isinstance(entry, dict)
+            and entry.get("status") != "removed"
+            and _is_eligible_source_file(entry.get("filename", ""), settings.ignore_paths)
+        ]
+        if len(relevant_files) > settings.max_files_per_pr:
+            review.status = ReviewStatus.SKIPPED
+            review.error_message = (
+                f"AI review skipped: PR exceeds the maximum file limit ({settings.max_files_per_pr})."
+            )
+            review.touch()
+            logger.info(
+                "review_skipped_large_pr",
+                review_id=review.id,
+                owner=owner,
+                repo=repo,
+                pr_number=pr_number,
+                files=len(relevant_files),
+                limit=settings.max_files_per_pr,
+            )
+            return ReviewResponse(
+                id=review.id,
+                status=review.status,
+                pr_number=review.pr_info.pr_number,
+                pr_title=review.pr_info.title,
+                total_findings=review.total_findings,
+                total_fixes=review.total_fixes,
+                created_at=review.created_at,
+                updated_at=review.updated_at,
+                completed_at=review.completed_at,
+            )
 
     # Kick off the background task (no await).
     asyncio.create_task(_run_review(review.id))

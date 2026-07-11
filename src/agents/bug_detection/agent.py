@@ -19,6 +19,14 @@ class BugDetectionAgent(BaseAnalysisAgent):
     def __init__(self, llm: LLMService | None = None) -> None:
         self.llm = llm or get_llm_service()
 
+    async def _static_triage(
+        self, code: str, file_path: str, context: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        suspicious_tokens = ["raise ", "except", "try:", "return", "assert", "open(", "with "]
+        if any(token in code for token in suspicious_tokens):
+            return [{"type": "syntax-signal", "token": "control-flow"}]
+        return []
+
     async def analyze(
         self, code: str, file_path: str, context: dict[str, Any] | None = None
     ) -> list[Finding]:
@@ -30,8 +38,13 @@ class BugDetectionAgent(BaseAnalysisAgent):
             {"start_line": f.location.start_line, "title": f.title}
             for f in static_findings
         ]
+        diff = (context or {}).get("diffs", {}).get(file_path, "")
         prompt = render(
-            "bug_detection.j2", file_path=file_path, code=code, static_findings=hints
+            "bug_detection.j2",
+            file_path=file_path,
+            code=code,
+            static_findings=hints,
+            diff=diff,
         )
         payload = await self.llm.complete_json(prompt)
         llm_findings = findings_from_llm(payload, Category.BUG, file_path)

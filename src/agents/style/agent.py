@@ -23,6 +23,13 @@ class StyleAgent(BaseAnalysisAgent):
     def __init__(self, llm: LLMService | None = None) -> None:
         self.llm = llm or get_llm_service()
 
+    async def _static_triage(
+        self, code: str, file_path: str, context: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        if any(token in code for token in ["import ", "def ", "class ", "return"]):
+            return [{"type": "structure", "token": "python-structure"}]
+        return []
+
     async def analyze(
         self, code: str, file_path: str, context: dict[str, Any] | None = None
     ) -> list[Finding]:
@@ -34,8 +41,13 @@ class StyleAgent(BaseAnalysisAgent):
             for f in ruff_findings
         ]
 
+        diff = (context or {}).get("diffs", {}).get(file_path, "")
         prompt = render(
-            "style.j2", file_path=file_path, code=code, ruff_issues=ruff_hints
+            "style.j2",
+            file_path=file_path,
+            code=code,
+            ruff_issues=ruff_hints,
+            diff=diff,
         )
         payload = await self.llm.complete_json(prompt)
         llm_findings = findings_from_llm(payload, Category.STYLE, file_path)

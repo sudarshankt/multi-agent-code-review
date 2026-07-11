@@ -15,9 +15,18 @@ Relevant security knowledge (OWASP / CWE) retrieved for this code:
 {{ rag_context }}
 
 {% endif %}
+{% if diff %}
+Diff for this file:
+```diff
+{{ diff }}
+```
+
+{% endif %}
 File: {{ file_path }}
 ```
 {{ code }}
 ```
+
+Focus your analysis on the changed lines in the diff first, and use the full file content only as supporting context.
 
 {% include "_common.j2" %}

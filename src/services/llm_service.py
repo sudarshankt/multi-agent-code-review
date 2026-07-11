@@ -102,9 +102,11 @@ def _extract_json(text: str) -> Any:
         if not cand:
             continue
         try:
-            return json.loads(cand)
+            parsed = json.loads(cand)
         except (json.JSONDecodeError, ValueError):
             continue
+        if isinstance(parsed, (list, dict)):
+            return parsed
 
     logger.warning("llm_json_parse_failed", preview=text[:200])
     return []
@@ -169,6 +171,8 @@ class LLMService:
     async def complete_json(self, prompt: str, *, system: str | None = None) -> Any:
         """Completion whose text is parsed as JSON (markdown-fence tolerant)."""
         text = await self.complete(prompt, system=system)
+        if not isinstance(text, str):
+            return []
         return _extract_json(text)
 
 

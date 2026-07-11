@@ -1,3 +1,5 @@
+# Purpose: Checks that the security retriever queries the knowledge base and returns relevant OWASP/CWE context for prompts.
+
 """Unit tests for SecurityRetriever — RAG query, fallback, and formatting."""
 
 from __future__ import annotations

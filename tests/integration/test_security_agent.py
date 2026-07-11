@@ -1,3 +1,5 @@
+# Purpose: Exercises the security agent against a real LLM-backed integration path to validate end-to-end behavior in a live environment.
+
 """Integration tests for the SecurityAgent with a real LLM.
 
 These tests require:

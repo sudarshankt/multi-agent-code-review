@@ -1,3 +1,5 @@
+# Purpose: Exercises the security agent end to end with fake LLM responses and fixture data to verify prompt, parsing, and finding behavior.
+
 """Unit tests for SecurityAgent — full pipeline with fake LLM and golden files.
 
 These tests validate the complete SecurityAgent.analyze() flow:

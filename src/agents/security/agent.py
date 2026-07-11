@@ -24,12 +24,28 @@ class SecurityAgent(BaseAnalysisAgent):
         self.llm = llm or get_llm_service()
         self.retriever = retriever or SecurityRetriever()
 
+    async def _static_triage(
+        self, code: str, file_path: str, context: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        keywords = ["import os", "subprocess", "eval", "exec", "requests", "open(", "pickle"]
+        if any(keyword in code for keyword in keywords):
+            return [{"type": "keyword", "keyword": "suspicious-pattern"}]
+        return []
+
     async def analyze(
         self, code: str, file_path: str, context: dict[str, Any] | None = None
     ) -> list[Finding]:
         rag_context = self.retriever.retrieve(code)
+        diff = (context or {}).get("diffs", {}).get(file_path, "")
         prompt = render(
-            "security.j2", file_path=file_path, code=code, rag_context=rag_context
+            "security.j2",
+            file_path=file_path,
+            code=code,
+            rag_context=rag_context,
+            diff=diff,
         )
         payload = await self.llm.complete_json(prompt)
-        return findings_from_llm(payload, Category.SECURITY, file_path)
+        findings = findings_from_llm(payload, Category.SECURITY, file_path)
+        for finding in findings:
+            finding.agent_name = self.name
+        return findings

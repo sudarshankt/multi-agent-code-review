@@ -30,6 +30,7 @@ class PRReviewState(TypedDict):
     # ---- Input ----
     pr_info: PRInfo
     files: dict[str, str]
+    diffs: dict[str, str]
     review_id: str  # For SSE event publishing
 
     # ---- Running ----
@@ -45,3 +46,4 @@ class PRReviewState(TypedDict):
 
     # ---- Metadata ----
     errors: list[str]
+    files_bypassed: int

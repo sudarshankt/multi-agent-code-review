@@ -43,7 +43,7 @@ async def initialize(state: PRReviewState) -> dict[str, Any]:
         "stage_update",
         {"stage": "INITIALIZED", "status": ReviewStatus.FETCHING.value},
     )
-    return {"status": ReviewStatus.FETCHING, "findings": [], "agent_results": {}, "fix_results": [], "errors": []}
+    return {"status": ReviewStatus.FETCHING, "findings": [], "agent_results": {}, "fix_results": [], "errors": [], "files_bypassed": 0, "diffs": {}}
 
 
 async def fetch_pr(state: PRReviewState) -> dict[str, Any]:
@@ -54,7 +54,7 @@ async def fetch_pr(state: PRReviewState) -> dict[str, Any]:
         "stage_update",
         {"stage": "PR_FETCHED", "status": ReviewStatus.ANALYZING.value, "files_count": len(state.get("files", {}))},
     )
-    return {"status": ReviewStatus.ANALYZING}
+    return {"status": ReviewStatus.ANALYZING, "diffs": state.get("diffs", {})}
 
 
 async def check_success(state: PRReviewState) -> dict[str, Any]:
@@ -198,6 +198,7 @@ async def aggregate_findings(state: PRReviewState) -> dict[str, Any]:
         "status": next_status,
         "findings": deduplicated_findings,
         "agent_results": updated_results,
+        "files_bypassed": state.get("files_bypassed", 0),
     }
 
 

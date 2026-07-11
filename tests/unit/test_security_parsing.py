@@ -1,3 +1,5 @@
+# Purpose: Validates that raw LLM output is converted into structured finding objects with the expected fields and defaults.
+
 """Unit tests for LLM response parsing — findings_from_llm and finding_from_dict."""
 
 from __future__ import annotations

@@ -131,6 +131,7 @@ class GitHubService:
 
         changed = await self.get_pr_files(owner, repo, pr_number)
         files: dict[str, str] = {}
+        diffs: dict[str, str] = {}
         for entry in changed:
             path = entry.get("filename", "")
             if entry.get("status") == "removed" or not _is_source_file(path):
@@ -140,6 +141,9 @@ class GitHubService:
             )
             if content is not None:
                 files[path] = content
+            patch = entry.get("patch")
+            if isinstance(patch, str) and patch.strip():
+                diffs[path] = patch
 
         logger.info(
             "fetched_pr_data",
@@ -149,4 +153,4 @@ class GitHubService:
             changed=len(changed),
             source_files=len(files),
         )
-        return {"pr_info": pr_info, "files": files, "changed_files": changed}
+        return {"pr_info": pr_info, "files": files, "diffs": diffs, "changed_files": changed}

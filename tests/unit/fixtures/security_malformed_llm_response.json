@@ -1,0 +1,15 @@
+```json
+[
+  {
+    "title": "OS Command Injection in subprocess call",
+    "description": "The `subprocess.call(cmd, shell=True)` call passes unsanitized user input to the shell.",
+    "severity": "high",
+    "confidence": "high",
+    "start_line": 8,
+    "end_line": 8,
+    "suggestion": "Use `subprocess.run(['cmd', arg], shell=False)` with a list of arguments instead.",
+    "cwe_id": "CWE-78",
+    "references": ["https://cwe.mitre.org/data/definitions/78.html"]
+  }
+]
+```

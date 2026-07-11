@@ -46,11 +46,11 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 60
 
     # ---- llm / anthropic ----
-    primary_model: str = "claude-sonnet-4-6"
-    fallback_model: str = "claude-sonnet-4-6"
+    primary_model: str = "deepseek-v4-pro"
+    fallback_model: str = "deepseek-v4-pro"
     llm_base_url: str | None = None
-    model_provider: str = "anthropic"
-    anthropic_api_key: str | None = None
+    model_provider: str = "deepseek"  # "anthropic" | "deepseek"
+    llm_api_key: str | None = None
     llm_max_tokens: int = 4096
     llm_requests_per_second: float = 200.0
     llm_timeout_seconds: float = 120.0
@@ -120,7 +120,7 @@ class Settings(BaseSettings):
             fallback_model=self.fallback_model,
             base_url=self.llm_base_url or None,
             provider=self.model_provider,
-            api_key=self.anthropic_api_key,
+            api_key=self.llm_api_key,
             max_tokens=self.llm_max_tokens,
             requests_per_second=self.llm_requests_per_second,
             timeout=self.llm_timeout_seconds,

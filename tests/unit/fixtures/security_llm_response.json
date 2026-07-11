@@ -1,0 +1,35 @@
+[
+  {
+    "title": "SQL Injection via string formatting in execute()",
+    "description": "The query uses f-string interpolation with a variable `user_input` that may contain untrusted data. An attacker could inject arbitrary SQL commands, leading to data exfiltration or modification.",
+    "severity": "critical",
+    "confidence": "high",
+    "start_line": 12,
+    "end_line": 14,
+    "suggestion": "Use parameterized queries: `cursor.execute(\"SELECT * FROM users WHERE name = ?\", (user_input,))` instead of string formatting.",
+    "cwe_id": "CWE-89",
+    "references": ["https://cwe.mitre.org/data/definitions/89.html", "https://owasp.org/www-project-top-ten/"]
+  },
+  {
+    "title": "Hardcoded API secret",
+    "description": "The file contains a hardcoded API key `sk_live_abc123xyz`. Secrets committed to source control can be exposed in the repository history.",
+    "severity": "high",
+    "confidence": "high",
+    "start_line": 5,
+    "end_line": 5,
+    "suggestion": "Load the secret from an environment variable: `api_key = os.environ.get('API_KEY')` and never hardcode credentials.",
+    "cwe_id": "CWE-798",
+    "references": ["https://cwe.mitre.org/data/definitions/798.html"]
+  },
+  {
+    "title": "Use of MD5 for password hashing",
+    "description": "The code uses `hashlib.md5()` to hash passwords. MD5 is cryptographically broken and unsuitable for password storage.",
+    "severity": "medium",
+    "confidence": "high",
+    "start_line": 20,
+    "end_line": 20,
+    "suggestion": "Use a strong, salted key derivation function like `hashlib.pbkdf2_hmac('sha256', password, salt, 100000)` or a dedicated library like bcrypt.",
+    "cwe_id": "CWE-327",
+    "references": ["https://cwe.mitre.org/data/definitions/327.html"]
+  }
+]

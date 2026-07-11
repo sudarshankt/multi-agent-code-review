@@ -18,6 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.agents.base import BaseAnalysisAgent
 from src.agents.parsing import findings_from_llm
 from src.agents.security.agent import SecurityAgent
 from src.agents.security.retriever import SecurityRetriever
@@ -226,6 +227,31 @@ class TestSecurityAgent:
         assert "sk_live_1234567890abcdef" not in prompt
         assert "<redacted>" in prompt
         assert "untrusted" in prompt.lower()
+
+    @pytest.mark.asyncio
+    async def test_run_tracks_bypassed_files_when_triage_skips(self) -> None:
+        """Triage skips increment the bypassed-file telemetry in the run context."""
+
+        class TriageOnlyAgent(BaseAnalysisAgent):
+            name = "triage_only"
+
+            async def _static_triage(
+                self, code: str, file_path: str, context: dict | None = None
+            ) -> list[dict[str, Any]]:
+                return []
+
+            async def analyze(
+                self, code: str, file_path: str, context: dict | None = None
+            ) -> list[Finding]:
+                raise AssertionError("analyze should not be called when triage skips")
+
+        agent = TriageOnlyAgent()
+        context: dict[str, Any] = {"triage_enabled": True, "files_bypassed": 0}
+
+        findings = await agent.run({"app.py": "print('hello')"}, context)
+
+        assert findings == []
+        assert context["files_bypassed"] == 1
 
     # ── BaseAgent.run() integration ───────────────────────────────────────
 

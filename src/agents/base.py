@@ -50,8 +50,8 @@ class BaseAnalysisAgent(ABC):
     async def run(
         self, files: dict[str, str], context: dict[str, Any] | None = None
     ) -> list[Finding]:
-        # Ensure context is a dict
-        base_context = context or {}
+        base_context = dict(context or {})
+        caller_context = context or {}
         findings: list[Finding] = []
         started = time.monotonic()
         semaphore = asyncio.Semaphore(5)
@@ -63,30 +63,31 @@ class BaseAnalysisAgent(ABC):
 
             async with semaphore:
                 try:
-                    # Create a shallow copy of context to prevent race conditions 
-                    # between concurrent file processing tasks
                     file_context = dict(base_context)
-                    
+
                     if triage_enabled:
                         triage_alerts = await self._static_triage(code, file_path, file_context)
-                        
-                        # Only skip if explicitly [] (meaning triage ran and found absolutely nothing)
+
                         if triage_alerts is not None and len(triage_alerts) == 0:
-                            logger.debug(
+                            files_bypassed = int(base_context.get("files_bypassed", 0)) + 1
+                            base_context["files_bypassed"] = files_bypassed
+                            caller_context["files_bypassed"] = files_bypassed
+                            file_context["files_bypassed"] = files_bypassed
+                            logger.info(
                                 "agent_triage_skipped",
                                 agent=self.name,
                                 file=file_path,
                                 alerts=0,
+                                files_bypassed=files_bypassed,
                             )
                             return []
-                        
-                        # Inject alerts into the file_context so analyze() can read them
+
                         file_context["triage_alerts"] = triage_alerts or []
                     else:
                         file_context["triage_alerts"] = []
 
                     file_findings = await self.analyze(code, file_path, file_context)
-                    
+
                 except Exception as exc:  # noqa: BLE001 - one bad file must not halt the agent
                     logger.warning(
                         "agent_file_failed",
@@ -102,7 +103,7 @@ class BaseAnalysisAgent(ABC):
 
         tasks = [process_file(file_path, code) for file_path, code in files.items()]
         results = await asyncio.gather(*tasks)
-        
+
         for file_findings in results:
             findings.extend(file_findings)
 
@@ -111,6 +112,7 @@ class BaseAnalysisAgent(ABC):
             agent=self.name,
             files=len(files),
             findings=len(findings),
+            files_bypassed=base_context.get("files_bypassed", 0),
             duration_seconds=round(time.monotonic() - started, 3),
         )
         return findings

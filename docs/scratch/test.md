@@ -5,6 +5,10 @@ uv run --with pytest-asyncio pytest tests/unit/ -v
 
 uv run --with pytest-asyncio pytest tests/unit/test_security_agent.py -v
 
+uv run pytest tests/unit/ -v
+
+uv run pytest tests/integration/ -v
+
 ## Integration
 # Ensure ANTHROPIC_API_KEY is set, then:
 uv run pytest tests/integration/test_security_agent.py -v -s

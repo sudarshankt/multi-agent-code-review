@@ -20,10 +20,11 @@ class ReviewStatus(str, Enum):
     CREATING_PR = "creating_pr"
     COMPLETED = "completed"
     FAILED = "failed"
+    SKIPPED = "skipped"
 
 
 # Statuses that terminate an SSE stream.
-TERMINAL_STATUSES = {ReviewStatus.COMPLETED, ReviewStatus.FAILED}
+TERMINAL_STATUSES = {ReviewStatus.COMPLETED, ReviewStatus.FAILED, ReviewStatus.SKIPPED}
 
 
 def _utcnow() -> datetime:

@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
     rate_limit_per_minute: int = 60
+    max_files_per_pr: int = Field(default=15, description="Maximum number of source files to analyze per PR")
+    ignore_paths: list[str] = Field(default_factory=lambda: ["tests/", "docs/", "migrations/", "node_modules/"])
 
     # ---- llm / anthropic ----
     primary_model: str = "deepseek-v4-pro"

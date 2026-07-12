@@ -1,3 +1,5 @@
+# Purpose: Exercises the security agent end to end with fake LLM responses and fixture data to verify prompt, parsing, and finding behavior.
+
 """Unit tests for SecurityAgent — full pipeline with fake LLM and golden files.
 
 These tests validate the complete SecurityAgent.analyze() flow:
@@ -16,6 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.agents.base import BaseAnalysisAgent
 from src.agents.parsing import findings_from_llm
 from src.agents.security.agent import SecurityAgent
 from src.agents.security.retriever import SecurityRetriever
@@ -207,6 +210,48 @@ class TestSecurityAgent:
 
         prompt = fake_llm.complete_calls[0]
         assert "src/views/login.py" in prompt
+
+    @pytest.mark.asyncio
+    async def test_prompt_redacts_secrets_and_labels_content_untrusted(self) -> None:
+        """The prompt is sanitized so secrets are redacted and untrusted content is labeled."""
+        fake_llm = FakeLLMService([])
+        retriever = SecurityRetriever(top_k=1)
+        retriever._query_chromadb = lambda _q: []
+        agent = SecurityAgent(llm=fake_llm, retriever=retriever)
+        code = 'api_key = "sk_live_1234567890abcdef"\nprint("hello")\n'
+        diff = '+api_key = "sk_live_1234567890abcdef"\n'
+
+        await agent.analyze(code, "app.py", {"diffs": {"app.py": diff}})
+
+        prompt = fake_llm.complete_calls[0]
+        assert "sk_live_1234567890abcdef" not in prompt
+        assert "<redacted>" in prompt
+        assert "untrusted" in prompt.lower()
+
+    @pytest.mark.asyncio
+    async def test_run_tracks_bypassed_files_when_triage_skips(self) -> None:
+        """Triage skips increment the bypassed-file telemetry in the run context."""
+
+        class TriageOnlyAgent(BaseAnalysisAgent):
+            name = "triage_only"
+
+            async def _static_triage(
+                self, code: str, file_path: str, context: dict | None = None
+            ) -> list[dict[str, Any]]:
+                return []
+
+            async def analyze(
+                self, code: str, file_path: str, context: dict | None = None
+            ) -> list[Finding]:
+                raise AssertionError("analyze should not be called when triage skips")
+
+        agent = TriageOnlyAgent()
+        context: dict[str, Any] = {"triage_enabled": True, "files_bypassed": 0}
+
+        findings = await agent.run({"app.py": "print('hello')"}, context)
+
+        assert findings == []
+        assert context["files_bypassed"] == 1
 
     # ── BaseAgent.run() integration ───────────────────────────────────────
 

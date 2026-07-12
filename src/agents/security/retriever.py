@@ -33,12 +33,21 @@ class SecurityRetriever:
 
     def retrieve(self, code: str) -> str:
         query = code[:MAX_CODE_CHARS_FOR_RAG]
-        docs = self._query_chromadb(query)
+        
+        # Defensive programming block:
+        # Wrap the call to _query_chromadb to catch mock exceptions or unexpected errors.
+        try:
+            docs = self._query_chromadb(query)
+        except Exception as exc:
+            logger.warning("security_rag_query_failed", error=str(exc))
+            docs = []
+
         if not docs:
             docs = _FALLBACK_KNOWLEDGE[: self.top_k]
             logger.info("security_rag_fallback", source="hardcoded_owasp", count=len(docs))
         else:
             logger.info("security_rag_retrieved", source="chromadb", count=len(docs))
+            
         return "\n".join(f"- {d}" for d in docs)
 
     def _query_chromadb(self, query: str) -> list[str]:

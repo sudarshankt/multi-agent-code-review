@@ -10,7 +10,7 @@ from src.agents.base import BaseAnalysisAgent
 from src.agents.parsing import findings_from_llm
 from src.core.constants import AGENT_STYLE, PYTHON_EXTENSIONS
 from src.core.logging import get_logger
-from src.models.finding import Category, Finding, Location, Severity
+from src.models.finding import Category, Finding, FindingSource, Location, Severity
 from src.prompts.loader import render
 from src.services.llm_service import LLMService, get_llm_service
 
@@ -23,6 +23,13 @@ class StyleAgent(BaseAnalysisAgent):
     def __init__(self, llm: LLMService | None = None) -> None:
         self.llm = llm or get_llm_service()
 
+    async def _static_triage(
+        self, code: str, file_path: str, context: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        if any(token in code for token in ["import ", "def ", "class ", "return"]):
+            return [{"type": "structure", "token": "python-structure"}]
+        return []
+
     async def analyze(
         self, code: str, file_path: str, context: dict[str, Any] | None = None
     ) -> list[Finding]:
@@ -34,8 +41,22 @@ class StyleAgent(BaseAnalysisAgent):
             for f in ruff_findings
         ]
 
+        diff = (context or {}).get("diffs", {}).get(file_path, "")
         prompt = render(
-            "style.j2", file_path=file_path, code=code, ruff_issues=ruff_hints
+            "style.j2",
+            file_path=file_path,
+            code=code,
+            ruff_issues=ruff_hints,
+            diff=diff,
+        )
+        logger.info(
+            "llm_prompt_preview",
+            agent_name=self.name,
+            file=file_path,
+            code_chars=len(code),
+            diff_chars=len(diff),
+            ruff_hints_count=len(ruff_hints),
+            prompt_total_chars=len(prompt),
         )
         payload = await self.llm.complete_json(prompt)
         llm_findings = findings_from_llm(payload, Category.STYLE, file_path)
@@ -50,7 +71,8 @@ class StyleAgent(BaseAnalysisAgent):
     def _run_ruff(self, code: str, file_path: str) -> list[Finding]:
         try:
             result = subprocess.run(
-                ["ruff", "check", "--output-format", "json", "--select", "E,W,F"],
+                ["ruff", "check", "--output-format", "json", "--select", "E,W,F",
+                 "--stdin-filename", file_path, "-"],
                 input=code.encode(),
                 capture_output=True,
                 timeout=10,
@@ -80,7 +102,7 @@ class StyleAgent(BaseAnalysisAgent):
                     title=f"{code_val}: {msg[:50]}",
                     description=msg,
                     location=Location(file_path=file_path, start_line=line, end_line=line),
-                    code=code_val,
+                    source=FindingSource.LINTER,
                 )
             )
         return findings

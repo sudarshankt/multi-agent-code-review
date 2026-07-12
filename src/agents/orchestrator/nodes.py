@@ -43,7 +43,7 @@ async def initialize(state: PRReviewState) -> dict[str, Any]:
         "stage_update",
         {"stage": "INITIALIZED", "status": ReviewStatus.FETCHING.value},
     )
-    return {"status": ReviewStatus.FETCHING, "findings": [], "agent_results": {}, "fix_results": [], "errors": []}
+    return {"status": ReviewStatus.FETCHING, "findings": [], "agent_results": {}, "fix_results": [], "errors": [], "files_bypassed": 0, "diffs": {}}
 
 
 async def fetch_pr(state: PRReviewState) -> dict[str, Any]:
@@ -54,7 +54,7 @@ async def fetch_pr(state: PRReviewState) -> dict[str, Any]:
         "stage_update",
         {"stage": "PR_FETCHED", "status": ReviewStatus.ANALYZING.value, "files_count": len(state.get("files", {}))},
     )
-    return {"status": ReviewStatus.ANALYZING}
+    return {"status": ReviewStatus.ANALYZING, "diffs": state.get("diffs", {})}
 
 
 async def check_success(state: PRReviewState) -> dict[str, Any]:
@@ -69,15 +69,30 @@ async def analyze_security(state: PRReviewState) -> dict[str, Any]:
     review_id = state.get("review_id", "unknown")
     started = time.monotonic()
     agent = SecurityAgent()
-    findings = await agent.run(state["files"])
+    context = {
+        "triage_enabled": True,
+        "diffs": state.get("diffs", {}),
+        "files_bypassed": int(state.get("files_bypassed", 0)),
+    }
+    findings = await agent.run(state["files"], context)
     duration = time.monotonic() - started
+    files_bypassed = int(context.get("files_bypassed", 0))
+    logger.info(
+        "agent_run_completed",
+        agent_name=AGENT_SECURITY,
+        review_id=review_id,
+        findings_count=len(findings),
+        files_bypassed=files_bypassed,
+        duration_seconds=round(duration, 3),
+    )
     await _publish_event_async(
         review_id,
         "agent_completed",
-        {"agent": AGENT_SECURITY, "findings_count": len(findings), "duration_seconds": duration},
+        {"agent": AGENT_SECURITY, "findings_count": len(findings), "duration_seconds": duration, "files_bypassed": files_bypassed},
     )
     return {
         "findings": findings,
+        "files_bypassed": files_bypassed,
         "agent_results": {
             AGENT_SECURITY: AgentResult(
                 agent_name=AGENT_SECURITY,
@@ -94,15 +109,30 @@ async def analyze_bug(state: PRReviewState) -> dict[str, Any]:
     review_id = state.get("review_id", "unknown")
     started = time.monotonic()
     agent = BugDetectionAgent()
-    findings = await agent.run(state["files"])
+    context = {
+        "triage_enabled": True,
+        "diffs": state.get("diffs", {}),
+        "files_bypassed": int(state.get("files_bypassed", 0)),
+    }
+    findings = await agent.run(state["files"], context)
     duration = time.monotonic() - started
+    files_bypassed = int(context.get("files_bypassed", 0))
+    logger.info(
+        "agent_run_completed",
+        agent_name=AGENT_BUG,
+        review_id=review_id,
+        findings_count=len(findings),
+        files_bypassed=files_bypassed,
+        duration_seconds=round(duration, 3),
+    )
     await _publish_event_async(
         review_id,
         "agent_completed",
-        {"agent": AGENT_BUG, "findings_count": len(findings), "duration_seconds": duration},
+        {"agent": AGENT_BUG, "findings_count": len(findings), "duration_seconds": duration, "files_bypassed": files_bypassed},
     )
     return {
         "findings": findings,
+        "files_bypassed": files_bypassed,
         "agent_results": {
             AGENT_BUG: AgentResult(
                 agent_name=AGENT_BUG,
@@ -119,15 +149,30 @@ async def analyze_style(state: PRReviewState) -> dict[str, Any]:
     review_id = state.get("review_id", "unknown")
     started = time.monotonic()
     agent = StyleAgent()
-    findings = await agent.run(state["files"])
+    context = {
+        "triage_enabled": True,
+        "diffs": state.get("diffs", {}),
+        "files_bypassed": int(state.get("files_bypassed", 0)),
+    }
+    findings = await agent.run(state["files"], context)
     duration = time.monotonic() - started
+    files_bypassed = int(context.get("files_bypassed", 0))
+    logger.info(
+        "agent_run_completed",
+        agent_name=AGENT_STYLE,
+        review_id=review_id,
+        findings_count=len(findings),
+        files_bypassed=files_bypassed,
+        duration_seconds=round(duration, 3),
+    )
     await _publish_event_async(
         review_id,
         "agent_completed",
-        {"agent": AGENT_STYLE, "findings_count": len(findings), "duration_seconds": duration},
+        {"agent": AGENT_STYLE, "findings_count": len(findings), "duration_seconds": duration, "files_bypassed": files_bypassed},
     )
     return {
         "findings": findings,
+        "files_bypassed": files_bypassed,
         "agent_results": {
             AGENT_STYLE: AgentResult(
                 agent_name=AGENT_STYLE,
@@ -144,15 +189,30 @@ async def analyze_performance(state: PRReviewState) -> dict[str, Any]:
     review_id = state.get("review_id", "unknown")
     started = time.monotonic()
     agent = PerformanceAgent()
-    findings = await agent.run(state["files"])
+    context = {
+        "triage_enabled": True,
+        "diffs": state.get("diffs", {}),
+        "files_bypassed": int(state.get("files_bypassed", 0)),
+    }
+    findings = await agent.run(state["files"], context)
     duration = time.monotonic() - started
+    files_bypassed = int(context.get("files_bypassed", 0))
+    logger.info(
+        "agent_run_completed",
+        agent_name=AGENT_PERFORMANCE,
+        review_id=review_id,
+        findings_count=len(findings),
+        files_bypassed=files_bypassed,
+        duration_seconds=round(duration, 3),
+    )
     await _publish_event_async(
         review_id,
         "agent_completed",
-        {"agent": AGENT_PERFORMANCE, "findings_count": len(findings), "duration_seconds": duration},
+        {"agent": AGENT_PERFORMANCE, "findings_count": len(findings), "duration_seconds": duration, "files_bypassed": files_bypassed},
     )
     return {
         "findings": findings,
+        "files_bypassed": files_bypassed,
         "agent_results": {
             AGENT_PERFORMANCE: AgentResult(
                 agent_name=AGENT_PERFORMANCE,
@@ -198,6 +258,7 @@ async def aggregate_findings(state: PRReviewState) -> dict[str, Any]:
         "status": next_status,
         "findings": deduplicated_findings,
         "agent_results": updated_results,
+        "files_bypassed": state.get("files_bypassed", 0),
     }
 
 

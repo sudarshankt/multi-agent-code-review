@@ -24,12 +24,18 @@ def add_agent_results(
     return merged
 
 
+def add_files_bypassed(left: int, right: int) -> int:
+    """Reducer: sum bypassed file counts from parallel agents."""
+    return left + right
+
+
 class PRReviewState(TypedDict):
     """Mutable state passed through the LangGraph pipeline."""
 
     # ---- Input ----
     pr_info: PRInfo
     files: dict[str, str]
+    diffs: dict[str, str]
     review_id: str  # For SSE event publishing
 
     # ---- Running ----
@@ -45,3 +51,4 @@ class PRReviewState(TypedDict):
 
     # ---- Metadata ----
     errors: list[str]
+    files_bypassed: Annotated[int, add_files_bypassed]

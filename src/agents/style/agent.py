@@ -49,6 +49,15 @@ class StyleAgent(BaseAnalysisAgent):
             ruff_issues=ruff_hints,
             diff=diff,
         )
+        logger.info(
+            "llm_prompt_preview",
+            agent_name=self.name,
+            file=file_path,
+            code_chars=len(code),
+            diff_chars=len(diff),
+            ruff_hints_count=len(ruff_hints),
+            prompt_total_chars=len(prompt),
+        )
         payload = await self.llm.complete_json(prompt)
         llm_findings = findings_from_llm(payload, Category.STYLE, file_path)
 

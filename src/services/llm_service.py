@@ -108,7 +108,12 @@ def _extract_json(text: str) -> Any:
         if isinstance(parsed, (list, dict)):
             return parsed
 
-    logger.warning("llm_json_parse_failed", preview=text[:200])
+    logger.warning(
+        "llm_json_parse_failed",
+        response_chars=len(text),
+        head=text[:300],
+        tail=text[-300:] if len(text) > 300 else "",
+    )
     return []
 
 

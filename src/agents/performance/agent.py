@@ -8,9 +8,12 @@ from src.agents.base import BaseAnalysisAgent
 from src.agents.parsing import findings_from_llm
 from src.agents.performance.analyzers import run_all
 from src.core.constants import AGENT_PERFORMANCE, PYTHON_EXTENSIONS
+from src.core.logging import get_logger
 from src.models.finding import Category, Finding
 from src.prompts.loader import render
 from src.services.llm_service import LLMService, get_llm_service
+
+logger = get_logger(__name__)
 
 
 class PerformanceAgent(BaseAnalysisAgent):
@@ -44,6 +47,15 @@ class PerformanceAgent(BaseAnalysisAgent):
             code=code,
             static_findings=hints,
             diff=diff,
+        )
+        logger.info(
+            "llm_prompt_preview",
+            agent_name=self.name,
+            file=file_path,
+            code_chars=len(code),
+            diff_chars=len(diff),
+            hints_count=len(hints),
+            prompt_total_chars=len(prompt),
         )
         payload = await self.llm.complete_json(prompt)
         llm_findings = findings_from_llm(payload, Category.PERFORMANCE, file_path)

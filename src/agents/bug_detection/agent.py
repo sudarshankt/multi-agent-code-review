@@ -60,4 +60,9 @@ class BugDetectionAgent(BaseAnalysisAgent):
         )
         payload = await self.llm.complete_json(prompt)
         llm_findings = findings_from_llm(payload, Category.BUG, file_path)
+        logger.info(
+            "llm_prompt_preview",
+            llm_findings=llm_findings,
+            ast_findings=static_findings
+        )
         return static_findings + llm_findings

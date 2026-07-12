@@ -50,6 +50,15 @@ def load_session_data(serialized_cookie_data):
     # This will execute arbitrary code if the payload is malicious
     return pickle.loads(serialized_cookie_data)
 
+def ping_host(user_input_ip):
+    # ❌ VULNERABILITY 3: OS Command Injection (CWE-78 / OWASP A03)
+    # Passing raw user input directly to os.system allows attackers to execute system-level commands.
+    command = f"ping -c 1 {user_input_ip}"
+    os.system(command)
+    # Attempting to fix OS Command Injection using subprocess
+    import subprocess
+    # Still vulnerable because shell=True executes commands via the system shell!
+    subprocess.run(f"ping -c 1 {user_input_ip}", shell=True)
 
 if __name__ == "__main__":
     # Test executions (benign demonstrations)

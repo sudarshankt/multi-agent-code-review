@@ -126,6 +126,10 @@ Instead of just warning the developer about trivial formatting issues, we can ru
 
 #### Implementation Strategy:
 1. Run `ruff check --select E,W,F,I --fix --exit-zero` on the file (or an in-memory buffer if we want to preview it).
+    - E — PEP 8 Errors (via pycodestyle)
+    - W — PEP 8 Warnings (via pycodestyle)
+    - F — Correctness and Logic (via pyflakes)
+    - I — Import Sorting (via isort)
 2. If changes are made, run a diff tool (`difflib`) to capture the syntactic fixes instantly and programmatically.
 3. Pass the *cleaned* code to the LLM. The LLM then only reviews the structurally and stylistically optimized code for deep, semantic code smells (like bad naming conventions, lack of polymorphism, or deep nesting), keeping token overhead to a minimum.
 

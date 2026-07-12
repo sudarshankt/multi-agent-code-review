@@ -7,12 +7,13 @@ and extracts only the exact imported function/class definitions to inject as LLM
 from __future__ import annotations
 
 import ast
-import logging
 import textwrap
 from pathlib import Path
 from typing import Any, NamedTuple
 
-logger = logging.getLogger(__name__)
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class ImportedSymbol(NamedTuple):

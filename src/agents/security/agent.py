@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import re
 import subprocess
 from typing import Any
@@ -12,12 +11,13 @@ from src.agents.base import BaseAnalysisAgent
 from src.agents.parsing import findings_from_llm
 from src.agents.security.retriever import SecurityRetriever
 from src.core.constants import AGENT_SECURITY
+from src.core.logging import get_logger
 from src.models.finding import Category, Finding
 from src.prompts.loader import render
 from src.services.llm_service import LLMService, get_llm_service
 from src.agents.dependency_resolver import stitch_context  # IMPORT STITCHER
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class SecurityAgent(BaseAnalysisAgent):
     name = AGENT_SECURITY

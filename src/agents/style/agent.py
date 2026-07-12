@@ -10,7 +10,7 @@ from src.agents.base import BaseAnalysisAgent
 from src.agents.parsing import findings_from_llm
 from src.core.constants import AGENT_STYLE, PYTHON_EXTENSIONS
 from src.core.logging import get_logger
-from src.models.finding import Category, Finding, Location, Severity
+from src.models.finding import Category, Finding, FindingSource, Location, Severity
 from src.prompts.loader import render
 from src.services.llm_service import LLMService, get_llm_service
 
@@ -71,7 +71,8 @@ class StyleAgent(BaseAnalysisAgent):
     def _run_ruff(self, code: str, file_path: str) -> list[Finding]:
         try:
             result = subprocess.run(
-                ["ruff", "check", "--output-format", "json", "--select", "E,W,F"],
+                ["ruff", "check", "--output-format", "json", "--select", "E,W,F",
+                 "--stdin-filename", file_path, "-"],
                 input=code.encode(),
                 capture_output=True,
                 timeout=10,
@@ -101,7 +102,7 @@ class StyleAgent(BaseAnalysisAgent):
                     title=f"{code_val}: {msg[:50]}",
                     description=msg,
                     location=Location(file_path=file_path, start_line=line, end_line=line),
-                    code=code_val,
+                    source=FindingSource.LINTER,
                 )
             )
         return findings

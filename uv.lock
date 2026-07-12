@@ -308,6 +308,7 @@ dependencies = [
     { name = "pytest-asyncio" },
     { name = "python-multipart" },
     { name = "redis" },
+    { name = "ruff" },
     { name = "structlog" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -349,6 +350,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "redis", specifier = ">=5.0" },
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21" },
+    { name = "ruff", specifier = ">=0.15.21" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
     { name = "sentence-transformers", marker = "extra == 'rag'", specifier = ">=3.0" },
     { name = "structlog", specifier = ">=24.1" },

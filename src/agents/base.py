@@ -75,7 +75,7 @@ class BaseAnalysisAgent(ABC):
                             file_context["files_bypassed"] = files_bypassed
                             logger.info(
                                 "agent_triage_skipped",
-                                agent=self.name,
+                                agent_name=self.name,
                                 file=file_path,
                                 alerts=0,
                                 files_bypassed=files_bypassed,
@@ -91,7 +91,7 @@ class BaseAnalysisAgent(ABC):
                 except Exception as exc:  # noqa: BLE001 - one bad file must not halt the agent
                     logger.warning(
                         "agent_file_failed",
-                        agent=self.name,
+                        agent_name=self.name,
                         file=file_path,
                         error=str(exc),
                     )
@@ -109,7 +109,7 @@ class BaseAnalysisAgent(ABC):
 
         logger.info(
             "agent_run_complete",
-            agent=self.name,
+            agent_name=self.name,
             files=len(files),
             findings=len(findings),
             files_bypassed=base_context.get("files_bypassed", 0),

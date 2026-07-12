@@ -59,6 +59,6 @@ if __name__ == "__main__":
     print("Hashing password using MD5:", hash_user_password("super_secure_123"))
     
     # These would fail or trigger exploits in production:
-    # get_user_profile("admin' OR '1'='1")
-    # ping_host("8.8.8.8; cat /etc/passwd")
+    get_user_profile("admin' OR '1'='1")
+    ping_host("8.8.8.8; cat /etc/passwd")
     # read_user_file("../../../etc/passwd")

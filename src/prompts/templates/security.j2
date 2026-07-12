@@ -21,15 +21,15 @@ Relevant security knowledge (OWASP / CWE) retrieved for this code:
 {# Safe lookup to check if we have any real code warnings vs system override flags #}
 {% set has_real_alerts = namespace(flag=false) %}
 {% for alert in triage_alerts %}
-  {% if alert.reason != "force_deep_security_scan" %}
+  {% if alert.get("reason", "") != "force_deep_security_scan" %}
     {% set has_real_alerts.flag = true %}
   {% endif %}
 {% endfor %}
 {% if has_real_alerts.flag %}
 Local static analysis tools flagged the following potential structural anomalies. Assess if these are true vulnerabilities or false positives:
 {% for alert in triage_alerts %}
-  {% if alert.reason != "force_deep_security_scan" %}
-- [{{ alert.source|upper }}] {{ alert.issue or alert.keyword }}{% if alert.line %} on line {{ alert.line }}{% endif %}
+  {% if alert.get("reason", "") != "force_deep_security_scan" %}
+- [{{ alert.get("source", "")|upper }}] {{ alert.get("issue") or alert.get("keyword") }}{% if alert.get("line") %} on line {{ alert.get("line") }}{% endif %}
   {% endif %}
 {% endfor %}
 

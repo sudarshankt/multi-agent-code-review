@@ -79,7 +79,7 @@ async def analyze_security(state: PRReviewState) -> dict[str, Any]:
     files_bypassed = int(context.get("files_bypassed", 0))
     logger.info(
         "agent_run_completed",
-        agent=AGENT_SECURITY,
+        agent_name=AGENT_SECURITY,
         review_id=review_id,
         findings_count=len(findings),
         files_bypassed=files_bypassed,
@@ -119,7 +119,7 @@ async def analyze_bug(state: PRReviewState) -> dict[str, Any]:
     files_bypassed = int(context.get("files_bypassed", 0))
     logger.info(
         "agent_run_completed",
-        agent=AGENT_BUG,
+        agent_name=AGENT_BUG,
         review_id=review_id,
         findings_count=len(findings),
         files_bypassed=files_bypassed,
@@ -159,7 +159,7 @@ async def analyze_style(state: PRReviewState) -> dict[str, Any]:
     files_bypassed = int(context.get("files_bypassed", 0))
     logger.info(
         "agent_run_completed",
-        agent=AGENT_STYLE,
+        agent_name=AGENT_STYLE,
         review_id=review_id,
         findings_count=len(findings),
         files_bypassed=files_bypassed,
@@ -199,7 +199,7 @@ async def analyze_performance(state: PRReviewState) -> dict[str, Any]:
     files_bypassed = int(context.get("files_bypassed", 0))
     logger.info(
         "agent_run_completed",
-        agent=AGENT_PERFORMANCE,
+        agent_name=AGENT_PERFORMANCE,
         review_id=review_id,
         findings_count=len(findings),
         files_bypassed=files_bypassed,

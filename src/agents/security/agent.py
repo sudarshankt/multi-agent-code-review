@@ -142,6 +142,17 @@ class SecurityAgent(BaseAnalysisAgent):
         )
 
         # 3. LLM Execution
+        logger.info(
+            "llm_prompt_preview",
+            agent_name=self.name,
+            file=file_path,
+            code_chars=len(sanitized_code),
+            diff_chars=len(sanitized_diff),
+            rag_chars=len(rag_context or ""),
+            dep_chars=len(dependency_context or ""),
+            triage_count=len(triage_alerts),
+            prompt_total_chars=len(prompt),
+        )
         payload = await self.llm.complete_json(prompt)
 
         # 4. Parsing

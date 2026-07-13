@@ -5,10 +5,13 @@ React 18 + TypeScript + Vite + TailwindCSS dashboard for the AI multi-agent PR r
 ## Quick Start
 
 ```bash
-# Install dependencies
-npm install
+# From the repository root, activate the Python environment and start the backend
+. .venv/bin/activate
+make run
 
-# Start dev server (proxies /api to http://localhost:8000)
+# In a second terminal, install dashboard dependencies and start the dev server
+cd dashboard
+npm install
 npm run dev
 
 # Open http://localhost:5173
@@ -22,6 +25,7 @@ npm run dev
 - ✅ **Severity Badges**: Color-coded severity levels (critical, high, medium, low, info)
 - ✅ **CWE Links**: Links to CWE definitions for security findings
 - ✅ **Responsive**: Mobile-friendly design with TailwindCSS
+- ✅ **Review Artifact Awareness**: The backend persists per-agent inputs and findings for the evaluation harness to reuse
 
 ## Project Structure
 

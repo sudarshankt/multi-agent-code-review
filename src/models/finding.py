@@ -76,6 +76,7 @@ class FixResult(BaseModel):
     fixed_code: str | None = None
     commit_sha: str | None = None
     commit_message: str | None = None
+    artifact_path: str | None = None
     success: bool = False
     error: str | None = None
     created_at: datetime = Field(default_factory=_utcnow)

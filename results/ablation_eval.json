@@ -1,0 +1,12 @@
+{
+  "benchmark": "Ablation baseline",
+  "agent": "all",
+  "n": 100,
+  "metrics": {
+    "f1": 0.58
+  },
+  "baseline_zero_shot": {
+    "f1": 0.58
+  },
+  "timestamp": "2026-07-13T00:00:00Z"
+}

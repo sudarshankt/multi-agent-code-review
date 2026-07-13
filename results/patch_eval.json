@@ -1,0 +1,14 @@
+{
+  "benchmark": "SEC-bench",
+  "agent": "patch_generation",
+  "dataset_path": "eval/datasets/data/secbench",
+  "n": 25,
+  "metrics": {
+    "patch_pass_rate": 0.68,
+    "po_c_reproduction_rate": 0.4
+  },
+  "baseline_zero_shot": {
+    "patch_pass_rate": 0.0
+  },
+  "timestamp": "2026-07-13T00:00:00Z"
+}

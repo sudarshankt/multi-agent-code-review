@@ -1,0 +1,16 @@
+{
+  "benchmark": "Project agent review",
+  "agent": "project_agents",
+  "source_review": "eval/datasets/sample_review.json",
+  "n": 2,
+  "metrics": {
+    "security_f1": 0.0,
+    "bug_f1": 0.0,
+    "total_findings": 2
+  },
+  "baseline_zero_shot": {
+    "security_f1": 0.0,
+    "bug_f1": 0.0
+  },
+  "timestamp": "2026-07-13T00:00:00Z"
+}

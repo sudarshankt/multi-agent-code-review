@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8'>
+  <title>Evaluation Results</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; color: #1f2937; }
+    h1 { margin-bottom: 0.25rem; }
+    .summary { color: #4b5563; margin-bottom: 1.5rem; }
+    .bar-row { display: grid; grid-template-columns: 180px 1fr 60px 90px; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; }
+    .bar-track { background: #e5e7eb; border-radius: 999px; overflow: hidden; height: 12px; }
+    .bar-value { background: linear-gradient(90deg, #2563eb, #38bdf8); height: 100%; }
+    .value { font-weight: 600; }
+    .baseline { color: #6b7280; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>Evaluation Results</h1>
+  <div class='summary'>Generated from final_report.json with 6 chartable metrics.</div>
+  <div class='bar-row'><div class='label'>PrimeVul</div><div class='bar-track'><div class='bar-value' style='width:75.0%'></div></div><div class='value'>0.75</div><div class='baseline'>baseline 0.60</div></div><div class='bar-row'><div class='label'>Defects4J</div><div class='bar-track'><div class='bar-value' style='width:75.0%'></div></div><div class='value'>0.75</div><div class='baseline'>baseline 0.65</div></div><div class='bar-row'><div class='label'>SEC-bench</div><div class='bar-track'><div class='bar-value' style='width:68.0%'></div></div><div class='value'>0.68</div><div class='baseline'>baseline 0.42</div></div><div class='bar-row'><div class='label'>Pylint agreement</div><div class='bar-track'><div class='bar-value' style='width:92.0%'></div></div><div class='value'>0.92</div><div class='baseline'>baseline 0.81</div></div><div class='bar-row'><div class='label'>RAGAS Faithfulness</div><div class='bar-track'><div class='bar-value' style='width:78.0%'></div></div><div class='value'>0.78</div><div class='baseline'>baseline 0.61</div></div><div class='bar-row'><div class='label'>Ablation baseline</div><div class='bar-track'><div class='bar-value' style='width:58.0%'></div></div><div class='value'>0.58</div><div class='baseline'>baseline 0.58</div></div>
+</body>
+</html>

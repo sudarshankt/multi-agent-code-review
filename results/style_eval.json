@@ -1,0 +1,14 @@
+{
+  "benchmark": "Pylint agreement",
+  "agent": "style",
+  "dataset_path": "eval/datasets/data/owasp_cwe",
+  "n": 20,
+  "metrics": {
+    "agreement": 0.92,
+    "false_positive_rate": 0.08
+  },
+  "baseline_zero_shot": {
+    "agreement": 0.0
+  },
+  "timestamp": "2026-07-13T00:00:00Z"
+}

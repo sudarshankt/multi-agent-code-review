@@ -1,0 +1,14 @@
+datasets:
+  root: ./data
+  primevul_n: 100
+  secbench_n: 50
+  defects4j_n: 50
+  radon_sample_n: 20
+  ragas_sample_n: 20
+
+cache:
+  dir: ./eval/cache
+  enabled: true
+
+report:
+  output_dir: ./results

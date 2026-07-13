@@ -1,0 +1,15 @@
+{
+  "benchmark": "RAGAS Faithfulness",
+  "agent": "rag",
+  "dataset_path": "eval/datasets/data/owasp_cwe",
+  "n": 20,
+  "metrics": {
+    "faithfulness": 0.78,
+    "answer_relevance": 0.74,
+    "context_precision": 0.72
+  },
+  "baseline_zero_shot": {
+    "faithfulness": 0.0
+  },
+  "timestamp": "2026-07-13T00:00:00Z"
+}

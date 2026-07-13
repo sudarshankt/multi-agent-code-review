@@ -1,0 +1,71 @@
+{
+  "id": "sample-review",
+  "pr_info": {
+    "owner": "example",
+    "repo": "demo",
+    "pr_number": 1,
+    "title": "Sample review",
+    "author": "demo"
+  },
+  "status": "completed",
+  "agent_results": {
+    "security": {
+      "agent_name": "security",
+      "status": "completed",
+      "findings": [
+        {
+          "category": "security",
+          "severity": "high",
+          "confidence": "high",
+          "title": "SQL injection",
+          "description": "Potential SQL injection",
+          "location": {
+            "file_path": "src/app.py",
+            "start_line": 1,
+            "end_line": 5,
+            "snippet": "query = 'SELECT ...'"
+          },
+          "suggestion": "Use parameterized queries",
+          "references": [],
+          "cwe_id": "CWE-89",
+          "agent_name": "security",
+          "source": "llm"
+        }
+      ],
+      "duration_seconds": 1.0
+    },
+    "bug_detection": {
+      "agent_name": "bug_detection",
+      "status": "completed",
+      "findings": [
+        {
+          "category": "bug_detection",
+          "severity": "medium",
+          "confidence": "medium",
+          "title": "Null handling bug",
+          "description": "Potential null dereference",
+          "location": {
+            "file_path": "src/util.py",
+            "start_line": 10,
+            "end_line": 20,
+            "snippet": "x.attr"
+          },
+          "suggestion": "Guard against None",
+          "references": [],
+          "agent_name": "bug_detection",
+          "source": "ast_analyzer"
+        }
+      ],
+      "duration_seconds": 1.0
+    }
+  },
+  "total_findings": 2,
+  "total_fixes": 0,
+  "fix_branch": null,
+  "fix_pr_url": null,
+  "triggered_by": "eval",
+  "error_message": null,
+  "created_at": "2026-07-13T00:00:00Z",
+  "updated_at": "2026-07-13T00:00:00Z",
+  "completed_at": "2026-07-13T00:00:00Z"
+}

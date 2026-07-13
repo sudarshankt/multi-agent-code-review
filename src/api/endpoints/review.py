@@ -18,6 +18,7 @@ from src.api.schemas.review import (
 )
 from src.core.logging import get_logger
 from src.models.review import PRInfo, Review, ReviewStatus
+from src.services.artifact_service import persist_generated_artifacts
 from src.services.github_service import GitHubService
 
 logger = get_logger(__name__)
@@ -76,6 +77,25 @@ async def _run_review(review_id: str) -> None:
 
         # Run the orchestrator graph.
         graph = get_graph()
+        review.agent_inputs = {
+            "security": {
+                "files": files,
+                "context": {"triage_enabled": True, "diffs": diffs, "files_bypassed": 0},
+            },
+            "bug_detection": {
+                "files": files,
+                "context": {"triage_enabled": True, "diffs": diffs, "files_bypassed": 0},
+            },
+            "style": {
+                "files": files,
+                "context": {"triage_enabled": True, "diffs": diffs, "files_bypassed": 0},
+            },
+            "performance": {
+                "files": files,
+                "context": {"triage_enabled": True, "diffs": diffs, "files_bypassed": 0},
+            },
+        }
+
         input_state = {
             "pr_info": review.pr_info,
             "files": files,
@@ -104,6 +124,12 @@ async def _run_review(review_id: str) -> None:
 
         review.total_findings = len(findings)
         review.total_fixes = len([r for r in fix_results if r.success])
+        files_bypassed = int(result.get("files_bypassed", 0))
+        persist_generated_artifacts(review.id, fix_results)
+        for agent_input in review.agent_inputs.values():
+            context = agent_input.get("context")
+            if isinstance(context, dict):
+                context["files_bypassed"] = files_bypassed
         review.status = ReviewStatus.COMPLETED
 
         # Set fix PR URL to the original PR (fixes committed to same branch)

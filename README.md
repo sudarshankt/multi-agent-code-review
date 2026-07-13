@@ -1,6 +1,6 @@
 # Cap PR Review — AI Multi-Agent PR Analysis System
 
-**Status**: Backend complete ✅ | Documentation complete ✅ | Dashboard (Phase 10) pending
+**Status**: Backend, dashboard, and evaluation harness complete ✅ | Documentation updated ✅
 
 An AI-powered system that automatically analyzes GitHub PRs using 5 specialized agents (security, bugs, style, performance, fixes), streams real-time progress via SSE, and commits auto-fixes directly to the PR head branch.
 
@@ -83,6 +83,14 @@ docs/
 ├── HLD.md                 # High-level design (architecture, flow)
 ├── LLD.md                 # Low-level design (detailed specs)
 └── USER_FLOWS.md          # User flows & integration guide
+
+eval/
+├── README.md              # Evaluation harness overview
+├── USAGE.md               # Eval usage guide and project-output workflow
+├── run_evals.py           # Entry point for all runners
+├── metrics/               # Classification and ablation helpers
+├── runners/               # Security, bug, patch, style, RAG, and project-agent evals
+└── report/                # Aggregation and rendering utilities
 
 tests/                      # Unit + integration tests (pytest-asyncio)
 ```
@@ -197,6 +205,14 @@ REDIS_HOST=localhost
 ```bash
 make test  # pytest-asyncio
 ```
+
+### Evaluation Harness
+```bash
+. .venv/bin/activate
+pytest -q tests/unit/test_eval_harness.py
+python eval/run_evals.py
+```
+The evaluation harness now benchmarks both benchmark-style tasks and project-review artifacts. Saved review payloads preserve per-agent `agent_inputs` (files + context) and `agent_results` (findings), so the eval can score the real inputs and outputs that flowed through the app pipeline. See [eval/README.md](eval/README.md) and [eval/USAGE.md](eval/USAGE.md) for the workflow, runner layout, and generated report details.
 
 ### Lint & Format
 ```bash

@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -60,6 +61,7 @@ class Review(BaseModel):
     pr_info: PRInfo
     status: ReviewStatus = ReviewStatus.PENDING
     agent_results: dict[str, AgentResult] = Field(default_factory=dict)
+    agent_inputs: dict[str, dict[str, Any]] = Field(default_factory=dict)
     total_findings: int = 0
     total_fixes: int = 0
     fix_branch: str | None = None

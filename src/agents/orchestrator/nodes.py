@@ -21,7 +21,6 @@ from src.core.constants import (
 )
 from src.core.logging import get_logger
 from src.models.review import AgentResult, ReviewStatus
-from src.services.git_service import GitService
 
 logger = get_logger(__name__)
 
@@ -43,7 +42,16 @@ async def initialize(state: PRReviewState) -> dict[str, Any]:
         "stage_update",
         {"stage": "INITIALIZED", "status": ReviewStatus.FETCHING.value},
     )
-    return {"status": ReviewStatus.FETCHING, "findings": [], "agent_results": {}, "fix_results": [], "errors": [], "files_bypassed": 0, "diffs": {}}
+    return {
+        "status": ReviewStatus.FETCHING,
+        "findings": [],
+        "agent_results": {},
+        "fix_results": [],
+        "proposed_fixes": [],
+        "errors": [],
+        "files_bypassed": 0,
+        "diffs": {},
+    }
 
 
 async def fetch_pr(state: PRReviewState) -> dict[str, Any]:
@@ -271,54 +279,60 @@ async def should_apply_fixes(state: PRReviewState) -> str:
 
 
 async def apply_fixes(state: PRReviewState) -> dict[str, Any]:
-    """Run FixAgent (requires PR info for GitHub API)."""
+    """Generate fix proposals (no commit). Proposals are stored for human review."""
     review_id = state.get("review_id", "unknown")
-    pr_info = state["pr_info"]
     findings = state.get("findings", [])
     files = state["files"]
 
     await _publish_event_async(
         review_id,
         "stage_update",
-        {"stage": "FIXING_START", "status": ReviewStatus.FIXING.value},
+        {"stage": "GENERATING_PROPOSALS", "status": ReviewStatus.FIXING.value},
     )
 
-    async with GitService() as git_service:
-        agent = FixAgent(git=git_service)
-        fix_results, _updated_files = await agent.run(
-            files, findings, pr_info.owner, pr_info.repo, pr_info.head_branch or "main"
+    agent = FixAgent()
+    proposals = await agent.generate_proposals(files, findings, review_id=review_id)
+
+    # Stream each proposal to the UI via SSE so the diff viewer populates in real-time
+    for proposal in proposals:
+        await _publish_event_async(
+            review_id,
+            "proposed_fix",
+            {
+                "fix_id": proposal.id,
+                "category": proposal.category,
+                "file_path": proposal.file_path,
+                "diff": proposal.diff,
+                "explanation": proposal.explanation,
+                "status": proposal.status.value,
+                "finding_ids": proposal.finding_ids,
+            },
         )
 
-    successful_fixes = len([r for r in fix_results if r.success])
-
-    if successful_fixes == 0 and findings:
-        logger.info(
-            "fixing_no_fixes_made",
-            findings_count=len(findings),
-            reason="LLM could not safely fix or all findings were non-critical",
-        )
-    elif successful_fixes > 0:
-        logger.info(
-            "fixing_completed",
-            fixes_applied=successful_fixes,
-            total_attempts=len(fix_results),
-        )
+    logger.info(
+        "proposals_generated",
+        review_id=review_id,
+        proposals_count=len(proposals),
+    )
 
     await _publish_event_async(
         review_id,
         "stage_update",
-        {"stage": "FIXING_COMPLETE", "fixes_applied": successful_fixes, "status": ReviewStatus.FIXING.value},
+        {
+            "stage": "PROPOSALS_READY",
+            "proposals_count": len(proposals),
+            "status": ReviewStatus.FIXING.value,
+        },
     )
 
-    return {"fix_results": fix_results, "status": ReviewStatus.COMPLETED}
+    return {"proposed_fixes": proposals, "fix_results": [], "status": ReviewStatus.FIXING}
 
 
 async def finalize(state: PRReviewState) -> dict[str, Any]:
     """Final aggregation and logging."""
     review_id = state.get("review_id", "unknown")
     findings = state.get("findings", [])
-    fix_results = state.get("fix_results", [])
-    successful_fixes = len([r for r in fix_results if r.success])
+    proposed_fixes = state.get("proposed_fixes", [])
 
     await _publish_event_async(
         review_id,
@@ -327,7 +341,7 @@ async def finalize(state: PRReviewState) -> dict[str, Any]:
             "stage": "COMPLETED",
             "status": ReviewStatus.COMPLETED.value,
             "total_findings": len(findings),
-            "total_fixes": successful_fixes,
+            "proposals_pending_review": len(proposed_fixes),
         },
     )
 
@@ -335,6 +349,6 @@ async def finalize(state: PRReviewState) -> dict[str, Any]:
         "review_complete",
         pr_number=state["pr_info"].pr_number,
         total_findings=len(findings),
-        total_fixes=successful_fixes,
+        proposals_pending_review=len(proposed_fixes),
     )
     return {"status": ReviewStatus.COMPLETED}

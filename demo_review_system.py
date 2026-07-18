@@ -33,10 +33,10 @@ def demo_review_submission():
     print("\n2️⃣  AVAILABLE REVIEW ENDPOINTS")
     print("-" * 70)
     endpoints = [
-        ("POST", "/api/reviews", "Create a new PR review"),
-        ("GET", "/api/reviews", "List all reviews"),
-        ("GET", "/api/reviews/{review_id}", "Get review details"),
-        ("GET", "/api/reviews/{review_id}/stream", "Stream review progress (SSE)"),
+        ("POST", "/api/v1/reviews", "Create a new PR review"),
+        ("GET", "/api/v1/reviews", "List all reviews"),
+        ("GET", "/api/v1/reviews/{review_id}", "Get review details"),
+        ("GET", "/api/v1/sse/{review_id}", "Stream review progress (SSE)"),
     ]
     for method, path, desc in endpoints:
         print(f"   {method:5} {path:35} - {desc}")
@@ -48,7 +48,7 @@ def demo_review_submission():
         "repo": "linux",
         "pr_number": 1234,
     }
-    print(f"   POST /api/reviews")
+    print(f"   POST /api/v1/reviews")
     print(f"   {json.dumps(sample_payload, indent=6)}")
     
     print("\n4️⃣  AGENT CAPABILITIES")
@@ -102,7 +102,7 @@ def demo_review_submission():
     print("      python test_pr_review.py owner/repo pr_number")
     print()
     print("   Option B: Direct API call")
-    print("      curl -X POST http://localhost:8000/api/reviews \\")
+    print("      curl -X POST http://localhost:8000/api/v1/reviews \\")
     print("        -H 'Content-Type: application/json' \\")
     print("        -d '{\"owner\": \"owner\", \"repo\": \"repo\", \"pr_number\": 123}'")
     print()
@@ -110,7 +110,7 @@ def demo_review_submission():
     print("      import httpx")
     print("      client = httpx.Client()")
     print("      response = client.post(")
-    print("          'http://localhost:8000/api/reviews',")
+    print("          'http://localhost:8000/api/v1/reviews',")
     print("          json={'owner': 'owner', 'repo': 'repo', 'pr_number': 123}")
     print("      )")
     

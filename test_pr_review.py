@@ -36,7 +36,7 @@ async def submit_pr_for_review(
     try:
         # Submit review
         response = await client.post(
-            f"{backend_url}/api/reviews",
+            f"{backend_url}/api/v1/reviews",
             json=review_payload,
         )
         response.raise_for_status()
@@ -56,7 +56,7 @@ async def submit_pr_for_review(
         
         async with client.stream(
             "GET",
-            f"{backend_url}/api/reviews/{review_id}/stream",
+            f"{backend_url}/api/v1/sse/{review_id}",
         ) as stream:
             async for line in stream.aiter_lines():
                 if not line.strip():
@@ -99,7 +99,7 @@ async def submit_pr_for_review(
         
         # Step 3: Get final review with agent inputs/outputs
         print("\n📊 Fetching complete review with agent inputs/outputs...")
-        response = await client.get(f"{backend_url}/api/reviews/{review_id}")
+        response = await client.get(f"{backend_url}/api/v1/reviews/{review_id}")
         response.raise_for_status()
         review_result = response.json()
         

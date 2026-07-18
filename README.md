@@ -289,6 +289,7 @@ Each agent:
 - **[HLD.md](docs/HLD.md)**: Architecture, components, dataflow
 - **[LLD.md](docs/LLD.md)**: Implementation details, API contracts, AST analyzers
 - **[USER_FLOWS.md](docs/USER_FLOWS.md)**: Integration guide, API examples, troubleshooting
+- **[PR_HANDLING.md](docs/PR_HANDLING.md)**: PR input sources, output storage, data flow, API reference
 - **[Build_from_Scratch.md](Build_from_Scratch.md)**: Complete specification (source of truth)
 
 ## Next Steps

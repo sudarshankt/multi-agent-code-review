@@ -219,3 +219,12 @@ __marimo__/
 
 # Local ChromaDB persistence
 .chroma/
+
+# Evaluation harness outputs
+results/
+eval/cache/
+eval/datasets/data/
+
+# Local evaluation artifacts
+codespace_*.html
+defects4j_lang1.txt

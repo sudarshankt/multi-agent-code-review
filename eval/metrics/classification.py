@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from collections import Counter
-from typing import Sequence
+from collections.abc import Sequence
 
 
 def calculate_binary_metrics(y_true: Sequence[int], y_pred: Sequence[int]) -> dict[str, float]:
@@ -11,9 +10,9 @@ def calculate_binary_metrics(y_true: Sequence[int], y_pred: Sequence[int]) -> di
     if len(y_true) != len(y_pred):
         raise ValueError("y_true and y_pred must have the same length")
 
-    tp = sum(1 for t, p in zip(y_true, y_pred) if t == 1 and p == 1)
-    fp = sum(1 for t, p in zip(y_true, y_pred) if t == 0 and p == 1)
-    fn = sum(1 for t, p in zip(y_true, y_pred) if t == 1 and p == 0)
+    tp = sum(1 for t, p in zip(y_true, y_pred, strict=True) if t == 1 and p == 1)
+    fp = sum(1 for t, p in zip(y_true, y_pred, strict=True) if t == 0 and p == 1)
+    fn = sum(1 for t, p in zip(y_true, y_pred, strict=True) if t == 1 and p == 0)
 
     precision = tp / (tp + fp) if (tp + fp) else 0.0
     recall = tp / (tp + fn) if (tp + fn) else 0.0

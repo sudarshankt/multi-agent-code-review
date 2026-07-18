@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from eval.report.aggregate_results import write_report_files
+from eval.report.render_results import write_html_report
 from eval.runners.run_ablation_eval import run_ablation_eval
 from eval.runners.run_bug_eval import run_bug_eval
 from eval.runners.run_patch_eval import run_patch_eval
@@ -41,6 +42,7 @@ def run_all_evals(output_dir: str | Path | None = None) -> tuple[dict, Path, Pat
     }
 
     json_path, markdown_path = write_report_files(report, output_path)
+    write_html_report(json_path, output_path / "evaluation_results.html")
     return report, json_path, markdown_path
 
 

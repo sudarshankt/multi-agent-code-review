@@ -44,7 +44,7 @@ def analyze(code: str, file_path: str) -> list[Finding]:
                     )
         # Comparison to None with == / !=.
         if isinstance(node, ast.Compare):
-            for op, comparator in zip(node.ops, node.comparators):
+            for op, comparator in zip(node.ops, node.comparators, strict=False):
                 if isinstance(op, (ast.Eq, ast.NotEq)) and (
                     isinstance(comparator, ast.Constant) and comparator.value is None
                 ):

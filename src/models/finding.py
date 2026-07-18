@@ -3,20 +3,20 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class Category(str, Enum):
+class Category(StrEnum):
     SECURITY = "security"
     BUG = "bug_detection"
     STYLE = "style"
     PERFORMANCE = "performance"
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -24,20 +24,20 @@ class Severity(str, Enum):
     INFO = "info"
 
 
-class Confidence(str, Enum):
+class Confidence(StrEnum):
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
 
 
-class FindingSource(str, Enum):
+class FindingSource(StrEnum):
     LLM = "llm"  # Claude LLM generated
     AST_ANALYZER = "ast_analyzer"  # Python AST static analysis
     LINTER = "linter"  # Ruff or similar linter
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _new_id() -> str:

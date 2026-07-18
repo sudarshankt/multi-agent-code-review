@@ -54,6 +54,7 @@ pythonpath = ["."]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = ["tests/test_data"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

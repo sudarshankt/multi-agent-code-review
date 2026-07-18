@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-18T17:43:18Z",
+  "generated_at": "2026-07-18T18:51:59Z",
   "summary": {
     "count": 7,
     "agents": [
@@ -30,7 +30,7 @@
       "baseline_zero_shot": {
         "f1": 0.6666666666666666
       },
-      "timestamp": "2026-07-18T17:43:18Z"
+      "timestamp": "2026-07-18T18:51:59Z"
     },
     {
       "benchmark": "Defects4J",
@@ -49,7 +49,7 @@
       "baseline_zero_shot": {
         "f1": 0.6666666666666666
       },
-      "timestamp": "2026-07-18T17:43:18Z"
+      "timestamp": "2026-07-18T18:51:59Z"
     },
     {
       "benchmark": "SEC-bench",
@@ -63,7 +63,7 @@
       "baseline_zero_shot": {
         "patch_pass_rate": 0.0
       },
-      "timestamp": "2026-07-18T17:43:18Z"
+      "timestamp": "2026-07-18T18:51:59Z"
     },
     {
       "benchmark": "Pylint agreement",
@@ -77,7 +77,7 @@
       "baseline_zero_shot": {
         "agreement": 0.0
       },
-      "timestamp": "2026-07-18T17:43:18Z"
+      "timestamp": "2026-07-18T18:51:59Z"
     },
     {
       "benchmark": "RAGAS Faithfulness",
@@ -92,7 +92,7 @@
       "baseline_zero_shot": {
         "faithfulness": 0.0
       },
-      "timestamp": "2026-07-18T17:43:18Z"
+      "timestamp": "2026-07-18T18:51:59Z"
     },
     {
       "benchmark": "Ablation baseline",
@@ -104,7 +104,7 @@
       "baseline_zero_shot": {
         "f1": 0.58
       },
-      "timestamp": "2026-07-18T17:43:18Z"
+      "timestamp": "2026-07-18T18:51:59Z"
     },
     {
       "benchmark": "Project agent review",
@@ -120,7 +120,7 @@
         "security_f1": 0.0,
         "bug_f1": 0.0
       },
-      "timestamp": "2026-07-18T17:43:18Z"
+      "timestamp": "2026-07-18T18:51:59Z"
     }
   ]
 }

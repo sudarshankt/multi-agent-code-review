@@ -5,8 +5,6 @@ NOTE: redis_settings MUST be a class attribute, not a @staticmethod (bug #1).
 
 from __future__ import annotations
 
-from arq.worker import Worker
-
 from src.infrastructure.redis.queue import get_redis_settings
 
 

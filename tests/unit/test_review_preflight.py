@@ -16,7 +16,7 @@ async def test_create_review_skips_large_pr(monkeypatch: pytest.MonkeyPatch) -> 
     get_settings.cache_clear()
 
     class FakeGitHubService:
-        async def __aenter__(self) -> "FakeGitHubService":
+        async def __aenter__(self) -> FakeGitHubService:
             return self
 
         async def __aexit__(self, exc_type, exc, tb) -> None:

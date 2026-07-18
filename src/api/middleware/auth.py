@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import hmac
 import hashlib
+import hmac
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware

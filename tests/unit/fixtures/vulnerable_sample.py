@@ -1,7 +1,6 @@
 # Test fixture - vulnerable Python code with SQL injection, hardcoded secret, and weak crypto
 
 import hashlib
-import os
 import sqlite3
 
 API_KEY = "sk_live_abc123xyz"

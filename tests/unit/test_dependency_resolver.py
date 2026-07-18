@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 import textwrap
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 

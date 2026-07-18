@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import ast
 from typing import Any
 
 from src.core.constants import (
     AGENT_FIX,
-    FIXABLE_SEVERITIES,
     FIX_CATEGORY_ORDER,
+    FIXABLE_SEVERITIES,
     MAX_FIX_FILES_PER_CATEGORY,
     PYTHON_EXTENSIONS,
 )

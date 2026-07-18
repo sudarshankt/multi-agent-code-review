@@ -13,13 +13,13 @@ try:
     # 3. Get your OWASP collection and count the records
     collection = client.get_collection("owasp_knowledge")
     count = collection.count()
-    print(f"\n--- 📊 Collection Stats ---")
-    print(f"Collection Name: 'owasp_knowledge'")
+    print("\n--- 📊 Collection Stats ---")
+    print("Collection Name: 'owasp_knowledge'")
     print(f"Total Documents Ingested: {count}")
     
     # 4. Peek at a sample document to make sure it reads correctly
     if count > 0:
-        print(f"\n--- 🔍 Peek (Sample Document) ---")
+        print("\n--- 🔍 Peek (Sample Document) ---")
         sample = collection.peek(limit=1)
         
         # Display sample details

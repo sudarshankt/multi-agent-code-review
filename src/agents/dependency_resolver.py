@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import ast
 import textwrap
-from pathlib import Path
 from typing import Any, NamedTuple
 
 from src.core.logging import get_logger

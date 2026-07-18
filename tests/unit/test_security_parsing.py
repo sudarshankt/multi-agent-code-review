@@ -7,8 +7,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from src.agents.parsing import findings_from_llm
 from src.models.finding import Category, Confidence, Finding, Severity
 

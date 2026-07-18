@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from src.agents.security.agent import SecurityAgent
-from src.models.finding import Category
 
 
 class FakeLLM:

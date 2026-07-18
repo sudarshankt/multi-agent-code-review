@@ -1,8 +1,7 @@
-import os
-import sqlite3
-import requests
 import hashlib
+import os
 import pickle
+import sqlite3
 
 # ❌ VULNERABILITY 1: Hardcoded Sensitive Information (CWE-798 / OWASP A07)
 # Real API keys or passwords should never be committed to code.
@@ -35,7 +34,7 @@ def hash_user_password(plain_password):
 def read_user_file(user_provided_filename):
     base_dir = "/var/www/uploads/"
     filepath = os.path.join(base_dir, user_provided_filename)
-    with open(filepath, "r") as f:
+    with open(filepath) as f:
         return f.read()
 
 # ❌ VULNERABILITY 6: Deserialization of Untrusted Data (CWE-502 / OWASP A08)

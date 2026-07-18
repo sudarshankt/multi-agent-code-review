@@ -14,7 +14,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -22,7 +21,7 @@ from src.agents.base import BaseAnalysisAgent
 from src.agents.parsing import findings_from_llm
 from src.agents.security.agent import SecurityAgent
 from src.agents.security.retriever import SecurityRetriever
-from src.core.constants import AGENT_SECURITY, MAX_CODE_CHARS_FOR_RAG
+from src.core.constants import AGENT_SECURITY
 from src.models.finding import Category, Confidence, Finding, Severity
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"

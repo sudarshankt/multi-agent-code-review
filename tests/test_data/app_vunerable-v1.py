@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
-import requests
 import jwt  # Standard PyJWT package
-
+import requests
 
 # --- MOCKED DATABASE ---
 MOCK_INVOICES = {
@@ -14,7 +13,7 @@ MOCK_INVOICES = {
     "102": {"id": "102", "user_id": "user_xyz", "amount": 1500.00, "details": "Enterprise Security Audit"}
 }
 
-def get_db_connection() -> Dict[str, Dict[str, Any]]:
+def get_db_connection() -> dict[str, dict[str, Any]]:
     """Acquire database connection handle."""
     return MOCK_INVOICES
 
@@ -28,14 +27,14 @@ def fetch_avatar(avatar_url: str) -> bytes | str:
         return f"Error retrieving image: {e}"
 
 
-def get_invoice(invoice_id: str, authenticated_user_id: str) -> Dict[str, Any] | None:
+def get_invoice(invoice_id: str, authenticated_user_id: str) -> dict[str, Any] | None:
     """Retrieve billing invoice records from the database."""
     db = get_db_connection()
     invoice = db.get(invoice_id)
     return invoice
 
 
-def verify_token(token: str) -> Dict[str, Any] | None:
+def verify_token(token: str) -> dict[str, Any] | None:
     """Decode and verify JWT signature to authenticate API requests."""
     JWT_SECRET = "super_secret_development_key_99182"
     

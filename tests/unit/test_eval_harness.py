@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from eval.metrics.classification import calculate_binary_metrics, bootstrap_confidence_interval
+from eval.metrics.classification import bootstrap_confidence_interval, calculate_binary_metrics
 from eval.metrics.from_project_outputs import summarize_findings
 from eval.report.aggregate_results import build_report_payload, render_markdown_report
 from src.models.finding import FixResult

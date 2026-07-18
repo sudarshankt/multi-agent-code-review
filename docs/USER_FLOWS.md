@@ -256,9 +256,10 @@ LOG_JSON=false
 API_PORT=8000
 CORS_ORIGINS='["http://localhost:5173"]'
 
-# LLM (Anthropic)
-PRIMARY_MODEL=claude-sonnet-4-6
-ANTHROPIC_API_KEY=<your-api-key>
+# LLM (Deepseek via Anthropic-compatible API by default)
+LLM_API_KEY=<your-api-key>
+LLM_BASE_URL=https://api.deepseek.com/anthropic
+PRIMARY_MODEL=deepseek-v4-pro
 
 # GitHub
 GITHUB_TOKEN=<fine-grained-pat>

@@ -35,8 +35,10 @@ cp .env.example .env
 Edit `.env` with your credentials:
 
 ```bash
-# Required: Anthropic API
-ANTHROPIC_API_KEY=your-anthropic-api-key
+# Required: LLM API (Deepseek or Anthropic-compatible)
+LLM_API_KEY=your-api-key
+LLM_BASE_URL=https://api.deepseek.com/anthropic   # remove for native Anthropic
+PRIMARY_MODEL=deepseek-v4-pro
 
 # Required: GitHub
 GITHUB_TOKEN=github_pat_xxxxx  # fine-grained PAT
@@ -44,7 +46,6 @@ GITHUB_WEBHOOK_SECRET=your-webhook-secret  # any random string
 
 # Optional: For enterprise
 # GITHUB_API_BASE_URL=https://github.enterprise.com/api/v3
-# LLM_BASE_URL=https://genai-gateway.example.com
 ```
 
 ### 1.4 Start Redis
@@ -254,7 +255,7 @@ If the FixAgent has permission (GitHub token has `contents:write`), it will:
 ```
 
 **Common causes:**
-- LLM API key invalid → check `.env` `ANTHROPIC_API_KEY`
+- LLM API key invalid → check `.env` `LLM_API_KEY` and `LLM_BASE_URL`
 - GitHub token invalid → check `.env` `GITHUB_TOKEN`
 - Network issue → check internet connection
 

@@ -183,9 +183,10 @@ curl http://localhost:8000/api/v1/reviews/abc123
 All via `.env` (see `.env.example`):
 
 ```bash
-# LLM
-ANTHROPIC_API_KEY=<your-api-key>
-PRIMARY_MODEL=claude-sonnet-4-6
+# LLM (Deepseek via Anthropic-compatible API by default)
+LLM_API_KEY=<your-api-key>
+LLM_BASE_URL=https://api.deepseek.com/anthropic
+PRIMARY_MODEL=deepseek-v4-pro
 
 # GitHub
 GITHUB_TOKEN=<fine-grained-pat>
@@ -301,7 +302,7 @@ Each agent:
 
 **Review stuck in ANALYZING?**
 - Check API logs for agent errors
-- Verify `ANTHROPIC_API_KEY` is valid
+- Verify `LLM_API_KEY` is valid and `LLM_BASE_URL` points to the correct endpoint
 - Check `GITHUB_TOKEN` permissions
 
 **ChromaDB not initialized?**

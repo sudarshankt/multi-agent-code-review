@@ -141,10 +141,10 @@ $ curl http://localhost:8000/health
 ```
 
 ### Available Endpoints
-- `POST /api/reviews` - Create new review
-- `GET /api/reviews` - List reviews
-- `GET /api/reviews/{review_id}` - Get review details
-- `GET /api/reviews/{review_id}/stream` - Stream progress (SSE)
+- `POST /api/v1/reviews` - Create new review
+- `GET /api/v1/reviews` - List reviews
+- `GET /api/v1/reviews/{review_id}` - Get review details
+- `GET /api/v1/sse/{review_id}` - Stream progress (SSE)
 - `GET /docs` - Interactive API documentation
 
 ---

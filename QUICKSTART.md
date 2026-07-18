@@ -2,10 +2,10 @@
 
 ## Prerequisites
 
-- ✅ Python 3.14+ installed
-- ✅ Node.js 18+ installed  
+- ✅ Python 3.12+ installed
+- ✅ Node.js 18+ installed
 - ✅ Docker installed
-- ✅ Anthropic API key (get at https://console.anthropic.com)
+- ✅ LLM API key (Deepseek or any Anthropic-compatible provider)
 - ✅ GitHub personal access token (PAT)
 
 ## ⚡ Quick: Run Everything Together
@@ -53,7 +53,9 @@ make install
 cp .env.example .env
 
 # Edit .env and add your credentials:
-#   ANTHROPIC_API_KEY=sk-ant-xxxxx
+#   LLM_API_KEY=your_api_key
+#   LLM_BASE_URL=https://api.deepseek.com/anthropic   # or leave blank for Anthropic
+#   PRIMARY_MODEL=deepseek-v4-pro
 #   GITHUB_TOKEN=github_pat_xxxxx
 ```
 
@@ -103,6 +105,7 @@ All 4 agents run **in parallel** → typical review = 30–60 seconds.
 
 ## 📖 Learn More
 
+- **[TESTING_INSTRUCTIONS.md](TESTING_INSTRUCTIONS.md)** — Testing & evaluation approach (all 5 layers)
 - **[TESTING_GUIDE.md](TESTING_GUIDE.md)** — Detailed setup + troubleshooting
 - **[README.md](README.md)** — Architecture overview + API docs
 - **[docs/USER_FLOWS.md](docs/USER_FLOWS.md)** — Integration examples
@@ -133,7 +136,7 @@ If you see `chromadb_not_installed` in logs → RAG is skipped, security checks 
 
 | Problem | Fix |
 |---------|-----|
-| "API key invalid" | Check `.env` `ANTHROPIC_API_KEY` |
+| "API key invalid" | Check `.env` `LLM_API_KEY` |
 | "GitHub token invalid" | Check `.env` `GITHUB_TOKEN` scope |
 | "PR not found" | Use a **real, public** PR URL |
 | "SSE not updating" | Reload browser (Cmd+R / Ctrl+R) |
@@ -157,4 +160,4 @@ When ready to deploy:
 
 ---
 
-**Questions?** Check [TESTING_GUIDE.md](TESTING_GUIDE.md) or [docs/USER_FLOWS.md](docs/USER_FLOWS.md) for detailed walkthroughs.
+**Questions?** Check [TESTING_INSTRUCTIONS.md](TESTING_INSTRUCTIONS.md) for the full testing and evaluation guide, or [docs/USER_FLOWS.md](docs/USER_FLOWS.md) for integration walkthroughs.

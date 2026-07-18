@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 from eval.report.aggregate_results import write_report_files
@@ -31,7 +32,7 @@ def run_all_evals(output_dir: str | Path | None = None) -> tuple[dict, Path, Pat
         results.append(run_project_agent_eval(sample_review, output_path))
 
     report = {
-        "generated_at": "2026-07-13T00:00:00Z",
+        "generated_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "summary": {
             "count": len(results),
             "agents": sorted({item.get("agent", "unknown") for item in results}),

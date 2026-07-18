@@ -413,6 +413,6 @@ The system is now **fully operational** and ready for:
 
 ---
 
-**Last Updated:** July 18, 2026, 16:30 UTC
+**Last Updated:** July 18, 2026, 17:20 UTC
 **Report Generated:** 2026-07-18
-**Evaluation Timestamp:** 2026-07-13
+**Evaluation Timestamp:** Generated at runtime by `eval/run_evals.py` using `datetime.now(UTC)`

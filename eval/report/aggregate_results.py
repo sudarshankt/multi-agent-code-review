@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -8,7 +9,7 @@ from typing import Any
 def build_report_payload(results: list[dict[str, Any]]) -> dict[str, Any]:
     """Build a summary payload for the evaluation report."""
     return {
-        "generated_at": "2026-07-13T00:00:00Z",
+        "generated_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "summary": {
             "count": len(results),
             "agents": sorted({item.get("agent", "unknown") for item in results}),

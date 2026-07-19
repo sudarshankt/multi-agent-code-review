@@ -1,0 +1,5 @@
+claim_id,supported,notes
+owasp-a1-1,yes,Directly supported by cited OWASP guidance
+owasp-a1-2,yes,Claim aligns with referenced CWE entry
+owasp-a1-3,no,Citation is related but does not support claim
+owasp-a1-4,yes,Citation and claim are consistent

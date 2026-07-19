@@ -5,11 +5,12 @@ This directory contains a standalone evaluation harness for benchmarking the mul
 ## What is included
 
 - Metric helpers for precision/recall/F1 and bootstrap confidence intervals in [metrics/classification.py](metrics/classification.py)
-- Runner scripts for security, bug, patch, style, RAG, ablation, and project-agent evaluation flows in [runners](runners)
+- Runner scripts for security, bug, patch, style, performance, RAG, ablation, and project-agent evaluation flows in [runners](runners)
 - Dataset download and preparation helpers in [datasets](datasets)
 - Human review sampling utilities in [human_eval](human_eval)
 - Report aggregation into JSON, Markdown, and HTML outputs in [report](report)
 - A top-level entry point in [run_evals.py](run_evals.py)
+- Internal benchmark sample loaders for repo-level bug detection, PatchEval-style patch correctness, and citation review scoring in [datasets/internal_benchmarks.py](datasets/internal_benchmarks.py)
 
 ## Quick start
 
@@ -33,7 +34,7 @@ The harness writes:
 - [results/evaluation_results.html](../results/evaluation_results.html)
 - [results/project_agent_eval.json](../results/project_agent_eval.json)
 
-Each runner also writes its own JSON result file under the results directory.
+Each runner also writes its own JSON result file under the results directory, including [results/performance_eval.json](../results/performance_eval.json).
 
 ## Benchmark methodology
 
@@ -43,8 +44,22 @@ The harness is organized around the benchmark categories described in the evalua
 - Bug detection evaluation uses a Defects4J-style checkout and measures binary detection quality.
 - Patch generation evaluation uses SEC-bench-style metadata and records the patch success signal.
 - Style and RAG evaluation use local OWASP/CWE knowledge assets as the grounding corpus for retrieval and style-related checks.
+- Performance evaluation scores hotspot detection as a binary benchmark with F1 and confidence intervals.
 - An ablation runner captures the zero-shot baseline signal for comparison with the multi-agent workflow.
 - The project-agent runner evaluates saved review artifacts emitted by the app pipeline and now consumes both the agent outputs and the preserved per-agent input payloads.
+- Runner outputs now include a `benchmark_coverage` section that marks implemented versus pending benchmark components for traceability.
+- Zero-shot baseline predictions are generated through a deterministic cached path keyed by prompt hash in `eval/cache` when caching is enabled.
+- RAG evaluation attempts a true RAGAS execution path first and records a fallback reason when RAGAS execution is unavailable.
+
+## RAGAS execution modes
+
+The RAG runner reports `ragas_execution.status` to clarify what actually ran:
+
+- `executed`: full RAGAS metric path succeeded.
+- `executed_partial`: ragas custom-metric fallback ran without hosted-model credentials.
+- `fallback`: ragas execution did not run; the payload includes an error.
+
+For benchmark traceability, both `executed` and `executed_partial` are treated as implemented in `benchmark_coverage`.
 
 ## Project review artifact contract
 

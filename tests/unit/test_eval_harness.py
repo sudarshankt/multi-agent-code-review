@@ -1,8 +1,16 @@
 from __future__ import annotations
 
-from eval.metrics.classification import bootstrap_confidence_interval, calculate_binary_metrics
+import json
+from pathlib import Path
+
+from eval.metrics.classification import (
+    bootstrap_confidence_interval,
+    calculate_binary_metrics,
+)
 from eval.metrics.from_project_outputs import summarize_findings
 from eval.report.aggregate_results import build_report_payload, render_markdown_report
+from eval.runners.run_performance_eval import run_performance_eval
+from eval.zero_shot_baseline import _extract_prediction, run_zero_shot_binary_predictions
 from src.models.finding import FixResult
 from src.models.review import PRInfo, Review
 from src.services.artifact_service import persist_generated_artifacts
@@ -45,7 +53,7 @@ def test_aggregate_report_renders_markdown_table() -> None:
     markdown = render_markdown_report(report)
 
     assert report["summary"]["count"] == 2
-    assert "| Benchmark | Agent | F1 |" in markdown
+    assert "| Benchmark | Agent | Metric | Value | Baseline |" in markdown
     assert "PrimeVul" in markdown
 
 
@@ -66,9 +74,64 @@ def test_summarize_findings_preserves_agent_inputs() -> None:
 
     summary = summarize_findings(review)
 
+    assert summary["agents"] == ["security", "bug_detection"]
     assert summary["input_agent_count"] == 2
     assert summary["input_file_count"] == 2
     assert summary["input_files_bypassed"] == 1
+
+
+def test_zero_shot_predictions_are_cached(tmp_path: Path) -> None:
+    rows = [{"label": 1}, {"label": 0}, {"label": 1}, {"label": 0}]
+    first = run_zero_shot_binary_predictions(
+        "cache-test",
+        rows,
+        label_key="label",
+        cache_enabled=True,
+        cache_dir=str(tmp_path),
+    )
+    second = run_zero_shot_binary_predictions(
+        "cache-test",
+        rows,
+        label_key="label",
+        cache_enabled=True,
+        cache_dir=str(tmp_path),
+    )
+    assert first == second
+
+
+def test_zero_shot_extract_prediction_handles_common_shapes() -> None:
+    assert _extract_prediction({"prediction": 1}) == 1
+    assert _extract_prediction({"label": "yes"}) == 1
+    assert _extract_prediction([{"prediction": 0}]) == 0
+    assert _extract_prediction("true") == 1
+
+
+def test_zero_shot_deterministic_fallback_without_remote(monkeypatch: object, tmp_path: Path) -> None:
+    monkeypatch.setenv("EVAL_DISABLE_ZERO_SHOT_LLM", "1")
+    rows = [{"label": 1}, {"label": 0}, {"label": 1}, {"label": 0}]
+    preds = run_zero_shot_binary_predictions(
+        "deterministic-test",
+        rows,
+        label_key="label",
+        cache_enabled=True,
+        cache_dir=str(tmp_path),
+    )
+    assert len(preds) == len(rows)
+    assert set(preds).issubset({0, 1})
+
+
+def test_run_performance_eval_writes_computed_metrics(tmp_path: Path) -> None:
+    result = run_performance_eval(tmp_path)
+
+    assert result["benchmark"] == "Performance hotspot detection"
+    assert "f1" in result["metrics"]
+    assert "f1_ci95" in result["metrics"]
+    assert "zero_shot_f1" in result["baseline_zero_shot"]
+
+    output_file = tmp_path / "performance_eval.json"
+    assert output_file.exists()
+    persisted = json.loads(output_file.read_text(encoding="utf-8"))
+    assert persisted["agent"] == "performance_agent"
 
 
 def test_persist_generated_artifacts_writes_reviewable_code(tmp_path: object) -> None:

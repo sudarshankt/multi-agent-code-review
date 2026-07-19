@@ -34,7 +34,10 @@ def summarize_findings(review: Review) -> dict[str, Any]:
         if isinstance(context, dict):
             input_files_bypassed = max(input_files_bypassed, int(context.get("files_bypassed", 0)))
 
+    ordered_agents = list(by_agent.keys()) if by_agent else list(review.agent_inputs.keys())
+
     return {
+        "agents": ordered_agents,
         "agent_count": len(by_agent),
         "input_agent_count": len(review.agent_inputs),
         "input_file_count": input_file_count,

@@ -5,7 +5,7 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
-_PRIMARY_METRIC_KEYS = ["f1", "patch_pass_rate", "agreement", "faithfulness", "security_f1"]
+_PRIMARY_METRIC_KEYS = ["f1", "patch_pass_rate", "agreement", "faithfulness", "security_f1", "avg_delta"]
 
 _AGENT_ICONS: dict[str, str] = {
     "security": "🔒",

@@ -23,12 +23,32 @@ This executes all runner modules and writes report artifacts to the results dire
 
 The download helpers in [datasets](datasets) try to populate benchmark repositories locally. If a repository cannot be cloned, the harness falls back to placeholder metadata files so the run still completes.
 
+Additional local sample inputs are used to score benchmark tracks that do not yet have a full external adapter:
+
+- Repo-level bug detection samples: [datasets/data/repo_level_bug_samples.json](datasets/data/repo_level_bug_samples.json)
+- CodeXGLUE security samples: [datasets/data/codexglue_security_samples.json](datasets/data/codexglue_security_samples.json)
+- CyberSecEval security-assistance samples: [datasets/data/cyberseceval_samples.json](datasets/data/cyberseceval_samples.json)
+- PatchEval-style correctness samples: [datasets/data/patcheval_samples.json](datasets/data/patcheval_samples.json)
+- SEC-bench style patch samples: [datasets/data/secbench_patch_samples.json](datasets/data/secbench_patch_samples.json)
+- Performance hotspot samples: [datasets/data/performance_samples.json](datasets/data/performance_samples.json)
+- Human-reviewed patch pass/fail labels: [human_eval/patch_review.csv](human_eval/patch_review.csv)
+- Human citation review labels: [human_eval/citation_review.csv](human_eval/citation_review.csv)
+
+The harness also stores deterministic zero-shot baseline predictions in `eval/cache` when cache is enabled in [config.yaml](config.yaml).
+
 ## Interpreting the results
 
 - Open [results/final_report.md](../results/final_report.md) for a compact table suitable for the evaluation report.
 - Use [results/final_report.json](../results/final_report.json) when you need machine-readable metrics for later aggregation or plotting.
 - Open [results/evaluation_results.html](../results/evaluation_results.html) for a simple browser-based view of the aggregate scores.
 - Compare each runner's metric against the included `baseline_zero_shot` value to understand the uplift from the multi-agent or retrieval workflow.
+- For RAG metrics, check the `ragas_execution` section in the JSON output to see whether RAGAS executed or fallback scoring was used.
+
+`ragas_execution.status` values:
+
+- `executed`: full ragas metric run succeeded.
+- `executed_partial`: ragas custom-metric fallback succeeded without hosted-model credentials.
+- `fallback`: ragas run failed; inspect `ragas_execution.error`.
 
 ## How to use this eval with project agent outputs
 

@@ -1,0 +1,5 @@
+patch_id,agent,pass,notes
+patch_1,security,yes,Patch resolves vulnerable path without touching tests
+patch_2,patch_generation,no,Patch fails functional behavior review
+patch_3,patch_generation,yes,Patch is correct and minimal
+patch_4,security,yes,Patch preserves tests and improves safety

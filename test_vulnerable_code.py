@@ -22,6 +22,7 @@ class UserManager:
     def __init__(self):
         self.db = sqlite3.connect(":memory:")
         self.users = {}  # Performance Issue: In-memory dict instead of indexes
+        self.admin_commands = {}  # Fix: define admin_commands dict
 
     def get_user_by_id(self, user_id):
         """Security Issue: SQL injection vulnerability."""
@@ -42,8 +43,8 @@ class UserManager:
         user = self.users.get(username)
         if not user:
             return False
-        # Bug: This condition is always true when user exists
-        if user["password"] == password or True:
+        # Bug: This condition was always true due to 'or True'
+        if user["password"] == password:
             return True
         return False
 
@@ -60,9 +61,9 @@ class UserManager:
         return result
 
     def parse_json_input(self, user_data: str):
-        """Security Issue: Unsafe eval and insecure deserialization."""
-        # Bug: Using eval on user input is dangerous
-        user_dict = eval(user_data)  # CRITICAL: Code injection vulnerability
+        """Security Issue: Unsafe eval replaced with json.loads."""
+        # Fix: Use json.loads instead of eval
+        user_dict = json.loads(user_data)
         return user_dict
 
     def process_request(self, user_input):
@@ -70,15 +71,15 @@ class UserManager:
         #Bug: No input validation
         x=json.loads(user_input)  # Style: Missing spaces around =
         if x["type"]=="admin":  # Style: Missing spaces around ==
-            # Bug: Undefined variable 'admin_commands' used
-            return admin_commands[x["command"]](x["data"])
+            # Fix: Use self.admin_commands (now defined)
+            return self.admin_commands[x["command"]](x["data"])
         return None
 
     def calculate_discount(self, price, discount_percent):
         """Bug: Incorrect calculation logic."""
         # Bug: Off-by-one or logic error
         discount_amount = price * discount_percent / 100
-        final_price = price - discount_amount + 1  # Suspicious +1
+        final_price = price - discount_amount  # Fix: removed erroneous +1
         return final_price
 
     def memory_leak_function(self):

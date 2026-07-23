@@ -11,16 +11,37 @@ ALLOWED_COMMANDS = {'ls', 'date', 'whoami', 'pwd', 'echo', 'cat'}
 
 @app.route('/user/<user_id>')
 def get_user(user_id):
-    # SQL Injection vulnerability fixed: use parameterized query
-    query = "SELECT * FROM users WHERE id = ?"
-    db = sqlite3.connect(':memory:')
-    cursor = db.cursor()
-    cursor.execute(query, (user_id,))
-    return cursor.fetchone()
+    """Retrieve a user by ID from the database.
+
+    Parameters:
+        user_id (str): The user ID to look up.
+
+    Returns:
+        tuple or None: The user record if found, else None.
+
+    Security:
+        Uses parameterized query to prevent SQL injection.
+    """
+    with sqlite3.connect(':memory:') as db:
+        cursor = db.cursor()
+        query = "SELECT * FROM users WHERE id = ?"
+        cursor.execute(query, (user_id,))
+        return cursor.fetchone()
 
 @app.route('/execute')
 def execute_command():
-    # Command injection vulnerability fixed: whitelist allowed commands and use subprocess.run
+    """Execute a predefined safe shell command.
+
+    Parameters:
+        cmd (str): The command name passed via query parameter 'cmd'.
+
+    Returns:
+        str: Execution output or error message.
+
+    Security:
+        Only whitelisted commands are allowed; uses subprocess.run with shell=False
+        to prevent command injection.
+    """
     cmd = request.args.get('cmd', '')
     if cmd not in ALLOWED_COMMANDS:
         return f"Command not allowed: {cmd}"
@@ -33,7 +54,17 @@ def execute_command():
 
 @app.route('/eval')
 def eval_code():
-    # Unsafe eval replaced with safe ast.literal_eval
+    """Safely evaluate a literal Python expression.
+
+    Parameters:
+        code (str): The expression string passed via query parameter 'code'.
+
+    Returns:
+        str: The evaluated value or an error message.
+
+    Security:
+        Uses ast.literal_eval to prevent arbitrary code execution.
+    """
     code = request.args.get('code', '')
     try:
         value = ast.literal_eval(code)
@@ -42,4 +73,16 @@ def eval_code():
         return f"Invalid expression: {e}"
 
 def weak_hash(password):
+    """Hash a password using bcrypt.
+
+    Parameters:
+        password (str): The plaintext password to hash.
+
+    Returns:
+        str: The bcrypt hash as a string.
+
+    Note:
+        This function should only be used for strong, salted hashing.
+        Ensure the password is not weak or commonly used.
+    """
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()

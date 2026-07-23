@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.endpoints import health, review, sse, webhook
+from src.api.endpoints import fixes
 from src.api.middleware import CorrelationIDMiddleware, HMACAuthMiddleware, RateLimitMiddleware
 from src.core.config import get_settings
 from src.core.logging import configure_logging, get_logger
@@ -76,6 +77,11 @@ def create_app() -> FastAPI:
         webhook.router,
         prefix=f"{settings.api.prefix}/webhook",
         tags=["webhooks"],
+    )
+    app.include_router(
+        fixes.router,
+        prefix=settings.api.prefix,
+        tags=["fixes"],
     )
 
     return app

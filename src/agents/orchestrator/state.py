@@ -7,6 +7,7 @@ from typing import Annotated, Any, TypedDict
 from langgraph.graph import add_messages
 
 from src.models.finding import Finding
+from src.models.fix import ProposedFix
 from src.models.review import PRInfo, ReviewStatus
 
 
@@ -46,8 +47,10 @@ class PRReviewState(TypedDict):
     findings: Annotated[list[Finding], add_findings]
     # Per-agent results: {agent_name: AgentResult}
     agent_results: Annotated[dict[str, Any], add_agent_results]
-    # Fix results from FixAgent (if applied).
+    # Fix results from FixAgent legacy path (if applied).
     fix_results: list[Any]
+    # Proposed fixes awaiting human approval (single writer — no reducer needed).
+    proposed_fixes: list[ProposedFix]
 
     # ---- Metadata ----
     errors: list[str]

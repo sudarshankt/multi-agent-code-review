@@ -86,6 +86,10 @@ class Settings(BaseSettings):
     worker_max_jobs: int = 5
     worker_job_timeout: int = 600
 
+    # ---- test gate ----
+    enable_test_gate: bool = Field(default=False, description="Enable optional pytest gate before committing fixes")
+    test_gate_timeout_secs: int = Field(default=120, description="Max seconds to wait for pytest to complete")
+
     # ---- derived / helpers ----
     @property
     def is_production(self) -> bool:

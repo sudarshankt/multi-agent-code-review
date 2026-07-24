@@ -11,6 +11,10 @@ def get_user(user_id):
     # Fixed SQL Injection: parameterized query
     query = "SELECT * FROM users WHERE id = ?"
     db = sqlite3.connect(':memory:')
+    db.execute('CREATE TABLE IF NOT EXISTS users (id INT, name TEXT)')
+    db.execute("INSERT INTO users (id, name) VALUES (1, 'Alice')")
+    db.execute("INSERT INTO users (id, name) VALUES (2, 'Bob')")
+    db.commit()
     cursor = db.cursor()
     cursor.execute(query, (user_id,))
     return cursor.fetchone()
@@ -20,6 +24,8 @@ def execute_command():
     # Fixed Command Injection: strict allowlist and subprocess with shell=False
     ALLOWED_COMMANDS = {'ls', 'date', 'whoami'}
     cmd = request.args.get('cmd')
+    if cmd is None:
+        return "Missing cmd parameter", 400
     if cmd not in ALLOWED_COMMANDS:
         return "Command not allowed"
     subprocess.run([cmd], capture_output=True, shell=False)
@@ -29,6 +35,8 @@ def execute_command():
 def eval_code():
     # Fixed Code Injection: use ast.literal_eval instead of eval
     code = request.args.get('code')
+    if code is None:
+        return "Missing code parameter", 400
     try:
         return str(ast.literal_eval(code))
     except (ValueError, SyntaxError) as e:

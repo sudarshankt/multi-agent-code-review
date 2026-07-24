@@ -190,6 +190,7 @@ class FixAgent:
             return result, None
 
         result.fixed_code = fixed_code
+        result.explanation = payload.get("explanation")
         result.success = True
         return result, fixed_code
 

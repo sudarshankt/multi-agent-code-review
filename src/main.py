@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.endpoints import eval as eval_endpoints
 from src.api.endpoints import health, review, sse, webhook
 from src.api.middleware import CorrelationIDMiddleware, HMACAuthMiddleware, RateLimitMiddleware
 from src.core.config import get_settings
@@ -76,6 +77,11 @@ def create_app() -> FastAPI:
         webhook.router,
         prefix=f"{settings.api.prefix}/webhook",
         tags=["webhooks"],
+    )
+    app.include_router(
+        eval_endpoints.router,
+        prefix=f"{settings.api.prefix}/eval",
+        tags=["eval"],
     )
 
     return app

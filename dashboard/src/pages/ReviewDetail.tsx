@@ -6,7 +6,7 @@ import { FindingsTable } from '../components/FindingsTable'
 import { ProgressStages } from '../components/ProgressStages'
 import { ProposedFixCard } from '../components/ProposedFixCard'
 import { TestResultPanel } from '../components/TestResultPanel'
-import { Loader, AlertCircle, GitBranch, GitCommit } from 'lucide-react'
+import { Loader, AlertCircle, GitBranch, GitCommit, Download, ExternalLink, Eye } from 'lucide-react'
 
 interface ReviewDetailPageProps {
   reviewId: string
@@ -18,6 +18,7 @@ export const ReviewDetailPage: React.FC<ReviewDetailPageProps> = ({ reviewId }) 
   const [error, setError] = useState<string | null>(null)
   const [fixActionLoading, setFixActionLoading] = useState(false)
   const [applyLoading, setApplyLoading] = useState(false)
+  const [selectedSeverities, setSelectedSeverities] = useState<string[]>(['critical', 'high', 'medium'])
   const [testRunLoading, setTestRunLoading] = useState(false)
   const [testFixLoading, setTestFixLoading] = useState(false)
   const [testFixProgress, setTestFixProgress] = useState<TestFixProgress | null>(null)
@@ -30,6 +31,7 @@ export const ReviewDetailPage: React.FC<ReviewDetailPageProps> = ({ reviewId }) 
   const [localFixes, setLocalFixes] = useState<ProposedFix[]>([])
   const [testRun, setTestRun] = useState<TestRunSummary | null>(null)
   const [fixesCommittedInfo, setFixesCommittedInfo] = useState<{ committed_count: number; commit_shas: Record<string, string> } | null>(null)
+  const [showCodeDiff, setShowCodeDiff] = useState(false)
 
   const { events, stages } = useSSE(reviewId, true, review?.status)
 
@@ -137,7 +139,7 @@ export const ReviewDetailPage: React.FC<ReviewDetailPageProps> = ({ reviewId }) 
   const handleApplyFixes = async () => {
     setApplyLoading(true)
     try {
-      const res = await fixesAPI.applyApprovedFixes(reviewId)
+      const res = await fixesAPI.applyApprovedFixes(reviewId, selectedSeverities)
       const { committed, commit_shas } = res.data
       setLocalFixes(prev => prev.map(f =>
         f.status === 'approved' ? { ...f, status: 'committed', commit_sha: commit_shas[f.category] } : f
@@ -173,7 +175,32 @@ export const ReviewDetailPage: React.FC<ReviewDetailPageProps> = ({ reviewId }) 
       setTestFixProgress(null)
     }
   }
-
+  const downloadFindings = () => {
+    if (!review) return
+    const findings = Object.entries(review.findings_by_category || {}).map(([category, items]) => ({
+      category,
+      findings: items,
+    }))
+    const findingsData = {
+      review_id: review.id,
+      pr_number: review.pr_number,
+      pr_title: review.pr_title,
+      pr_url: review.pr_url,
+      total_findings: review.total_findings,
+      total_fixes: review.total_fixes,
+      status: review.status,
+      created_at: review.created_at,
+      completed_at: review.completed_at,
+      findings: findings,
+    }
+    const element = document.createElement('a')
+    element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(findingsData, null, 2)))
+    element.setAttribute('download', `review_findings_pr_${review.pr_number}.json`)
+    element.style.display = 'none'
+    document.body.appendChild(element)
+    element.click()
+    document.body.removeChild(element)
+  }
   // Initial + polling fetch. Uses statusRef (not the closed-over `review`
   // variable) so the interval correctly detects a terminal status and stops,
   // regardless of when this effect was originally created. Also stops on a
@@ -299,6 +326,21 @@ export const ReviewDetailPage: React.FC<ReviewDetailPageProps> = ({ reviewId }) 
           </div>
         </div>
 
+        {/* PR Link */}
+        {review.pr_url && (
+          <div className="mb-4">
+            <a
+              href={review.pr_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View PR on GitHub
+            </a>
+          </div>
+        )}
+
         <div className="grid grid-cols-3 gap-4 pt-4 border-t">
           <div>
             <p className="text-sm text-gray-600">Findings</p>
@@ -314,7 +356,93 @@ export const ReviewDetailPage: React.FC<ReviewDetailPageProps> = ({ reviewId }) 
           </div>
         </div>
 
-        {/* Fix PR Link */}
+        {/* Findings Download & Fix Links */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          {/* Findings Download */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-blue-900">Audit Findings</p>
+                <p className="text-sm text-blue-700 mt-1">
+                  {review.total_findings} issue{review.total_findings !== 1 ? 's' : ''} identified
+                </p>
+              </div>
+              <button
+                onClick={downloadFindings}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 inline-flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Export JSON
+              </button>
+            </div>
+          </div>
+
+          {/* Fix Links */}
+          {(review.fix_branch || review.fix_pr_url) && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-green-900">Fix References</p>
+                <div className="flex flex-col gap-2">
+                  {review.fix_branch && (
+                    <a
+                      href={`https://github.com/${review.pr_url?.split('/')[3]}/${review.pr_url?.split('/')[4]}/tree/${review.fix_branch}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 text-sm font-medium"
+                    >
+                      <GitBranch className="w-4 h-4" />
+                      Branch: {review.fix_branch}
+                    </a>
+                  )}
+                  {review.fix_pr_url && (
+                    <a
+                      href={review.fix_pr_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 text-sm font-medium"
+                    >
+                      <GitCommit className="w-4 h-4" />
+                      View Fixes PR
+                    </a>
+                  )}
+                  {review.fix_branch && (
+                    <button
+                      onClick={() => setShowCodeDiff(!showCodeDiff)}
+                      className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 text-sm font-medium"
+                    >
+                      <Eye className="w-4 h-4" />
+                      {showCodeDiff ? 'Hide' : 'Show'} Code Diff
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Code Diff */}
+        {showCodeDiff && review.fix_branch && (
+          <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-gray-900">Code Diff Preview</p>
+              <a
+                href={`https://github.com/${review.pr_url?.split('/')[3]}/${review.pr_url?.split('/')[4]}/compare/${review.pr_head_branch}...${review.fix_branch}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-gray-600 hover:text-gray-800 font-medium"
+              >
+                View Full Diff on GitHub →
+              </a>
+            </div>
+            <div className="bg-white rounded border border-gray-300 p-3 text-xs text-gray-600 font-mono overflow-auto max-h-64">
+              <p className="text-center text-gray-500">
+                Click "View Full Diff on GitHub" to see the complete code changes
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Fix PR Link (Legacy) */}
         {review.fix_pr_url && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
             <div className="flex items-center justify-between">
@@ -333,6 +461,60 @@ export const ReviewDetailPage: React.FC<ReviewDetailPageProps> = ({ reviewId }) 
                 View PR with Fixes →
               </a>
             </div>
+          </div>
+        )}
+
+        {/* Completion Metrics */}
+        {review.status === 'completed' && (review.analysis_duration_seconds !== undefined || review.total_duration_seconds !== undefined || review.tokens_used) && (
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mt-4">
+            <p className="text-sm font-semibold text-slate-900 mb-3">Review Completion Metrics</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {review.analysis_duration_seconds !== undefined && (
+                <div className="bg-white rounded p-3 border border-slate-200">
+                  <p className="text-xs text-slate-600 font-medium">Analysis Time</p>
+                  <p className="text-sm font-semibold text-slate-900 mt-1">
+                    {Math.round(review.analysis_duration_seconds)}s
+                  </p>
+                </div>
+              )}
+              {review.total_duration_seconds !== undefined && (
+                <div className="bg-white rounded p-3 border border-slate-200">
+                  <p className="text-xs text-slate-600 font-medium">Total Time</p>
+                  <p className="text-sm font-semibold text-slate-900 mt-1">
+                    {Math.round(review.total_duration_seconds)}s
+                  </p>
+                </div>
+              )}
+              {review.tokens_used !== undefined && review.tokens_used > 0 && (
+                <div className="bg-white rounded p-3 border border-slate-200">
+                  <p className="text-xs text-slate-600 font-medium">Tokens Used</p>
+                  <p className="text-sm font-semibold text-slate-900 mt-1">
+                    {review.tokens_used.toLocaleString()}
+                  </p>
+                </div>
+              )}
+              {review.fix_severity_levels && review.fix_severity_levels.length > 0 && (
+                <div className="bg-white rounded p-3 border border-slate-200">
+                  <p className="text-xs text-slate-600 font-medium">Fixed Severity Levels</p>
+                  <p className="text-xs font-medium text-slate-900 mt-1 capitalize">
+                    {review.fix_severity_levels.join(', ')}
+                  </p>
+                </div>
+              )}
+            </div>
+            {review.fix_commits && Object.keys(review.fix_commits).length > 0 && (
+              <div className="mt-3 bg-white rounded p-3 border border-slate-200">
+                <p className="text-xs text-slate-600 font-medium mb-2">Commits by Category</p>
+                <div className="space-y-1">
+                  {Object.entries(review.fix_commits).map(([category, commit]) => (
+                    <div key={category} className="flex items-center justify-between text-xs">
+                      <span className="text-slate-600 capitalize font-medium">{category}:</span>
+                      <code className="bg-slate-100 px-2 py-1 rounded text-slate-800">{commit.slice(0, 8)}</code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -406,6 +588,44 @@ export const ReviewDetailPage: React.FC<ReviewDetailPageProps> = ({ reviewId }) 
               Approve or reject all {localFixes.length} proposed fix{localFixes.length !== 1 ? 'es' : ''} before you can apply them
               ({pendingCount} still pending).
             </p>
+          )}
+
+          {/* Severity Selection */}
+          {allDecided && committedCount === 0 && approvedCount > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm font-semibold text-blue-900 mb-3">Select Severity Levels to Fix</p>
+              <div className="flex flex-wrap gap-3">
+                {['critical', 'high', 'medium', 'low', 'info'].map(severity => (
+                  <label key={severity} className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedSeverities.includes(severity)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSeverities([...selectedSeverities, severity])
+                        } else {
+                          setSelectedSeverities(selectedSeverities.filter(s => s !== severity))
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-blue-800 capitalize">{severity}</span>
+                  </label>
+                ))}
+                <button
+                  onClick={() => setSelectedSeverities(['critical', 'high', 'medium', 'low', 'info'])}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium ml-4"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={() => setSelectedSeverities([])}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Commit success banner */}

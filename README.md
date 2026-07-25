@@ -42,6 +42,29 @@ npm run dev
 # Dashboard at http://localhost:5173
 ```
 
+### Demo Initialization Sequence (Full Stack)
+
+For demos, bring up the entire stack with one command:
+
+```bash
+make run-demo
+```
+
+Backend-only demo mode is also available:
+
+```bash
+make run-demo-backend
+```
+
+This starts infrastructure plus all app surfaces:
+- Redis: `localhost:6379`
+- ChromaDB: `localhost:8001`
+- API: `http://localhost:8000`
+- Dashboard: `http://localhost:5173`
+- Streamlit: `http://localhost:8501`
+
+When done, press `Ctrl+C` to stop local processes, then run `make down` to stop Docker services.
+
 ## Project Structure
 
 ```
@@ -215,6 +238,11 @@ make up     # Start Redis
 make run    # Start API (foreground)
 # In another terminal:
 npm run dev # Start dashboard (from dashboard/)
+```
+
+### Start Full Demo Stack
+```bash
+make run-demo
 ```
 
 ## Architecture Highlights

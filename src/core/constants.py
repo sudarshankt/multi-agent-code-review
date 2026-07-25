@@ -20,7 +20,7 @@ ANALYSIS_AGENTS = (AGENT_SECURITY, AGENT_BUG, AGENT_STYLE, AGENT_PERFORMANCE)
 SEVERITY_ORDER = ("critical", "high", "medium", "low", "info")
 
 # Severities the FixAgent will attempt to auto-fix.
-FIXABLE_SEVERITIES = ("critical", "high")
+FIXABLE_SEVERITIES = ("critical", "high", "medium")
 
 # Order in which fix categories are committed (one commit per category).
 FIX_CATEGORY_ORDER = (AGENT_SECURITY, AGENT_BUG, AGENT_STYLE, AGENT_PERFORMANCE)

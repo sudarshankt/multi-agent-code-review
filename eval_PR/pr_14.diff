@@ -1,0 +1,387 @@
+diff --git a/test_vulnerable_app.py b/test_vulnerable_app.py
+new file mode 100644
+index 0000000..2f3af56
+--- /dev/null
++++ b/test_vulnerable_app.py
+@@ -0,0 +1,168 @@
++"""Test file with intentional bugs for agent detection."""
++
++import sqlite3
++import pickle
++import os
++from typing import Any
++
++
++# ========== SECURITY ISSUES ==========
++
++def get_user_from_db(user_id: str, db_path: str = "users.db") -> dict[str, Any]:
++    """SQL Injection vulnerability - direct string concatenation."""
++    conn = sqlite3.connect(db_path)
++    cursor = conn.cursor()
++    # BUG: SQL Injection vulnerability
++    query = f"SELECT * FROM users WHERE id = '{user_id}'"
++    cursor.execute(query)
++    return cursor.fetchone()
++
++
++def load_user_data(serialized_data: bytes) -> Any:
++    """Unsafe pickle deserialization - arbitrary code execution risk."""
++    # BUG: Security issue - pickle can execute arbitrary code
++    return pickle.loads(serialized_data)
++
++
++def process_api_request(user_input: str) -> str:
++    """XSS vulnerability - no input sanitization."""
++    # BUG: No HTML escaping - XSS vulnerability
++    return f"<div>{user_input}</div>"
++
++
++HARDCODED_SECRET = "sk_test_xxxxxxxxxxxxxxxxxxxx"  # BUG: Should not hardcode secrets
++API_KEY = "AKIA_test_xxxxxxxxxxxxxxxxxxxxx"  # BUG: Should not hardcode API keys
++
++
++# ========== BUG DETECTION ISSUES ==========
++
++def calculate_total_price(items: list[dict]) -> float:
++    """Logic bug - undefined variable."""
++    total = 0
++    for item in items:
++        quantity = item["qty"]
++        # BUG: 'price' variable not defined, should be item["price"]
++        total += price * quantity
++    return total
++
++
++def process_data(data: list) -> int:
++    """Off-by-one error."""
++    # BUG: IndexError - range should be range(len(data)-1) or range(len(data))
++    for i in range(len(data) + 1):
++        result = data[i]
++    return result
++
++
++def divide_numbers(a: int, b: int) -> float:
++    """Missing null check."""
++    # BUG: No check for b == 0 - division by zero
++    return a / b
++
++
++# ========== STYLE ISSUES ==========
++
++def x(a, b, c):
++    """Poor naming - function and variable names."""
++    xxx = a + b
++    yyy = xxx * c
++    return yyy
++
++
++def VeryLongFunctionNameWithManyParametersButNotFollowingConvention(p1, p2, p3, p4, p5):  # noqa
++    """Inconsistent naming conventions."""
++    result = p1 + p2 + p3 + p4 + p5
++    return result
++
++
++class MyClass:
++    """Missing docstring and poorly organized."""
++    def __init__(self):
++        self.x = 1
++        self.y = 2
++        self.z = 3
++
++    def method1(self):
++        return self.x + self.y
++
++    def method2(self):
++        return self.x * self.y
++
++    def method3(self):
++        return self.y * self.z
++
++
++# ========== PERFORMANCE ISSUES ==========
++
++def inefficient_search(items: list[int], target: int) -> bool:
++    """O(n²) complexity - inefficient nested loop."""
++    found = False
++    # BUG: Performance - quadratic complexity
++    for i in items:
++        for j in items:
++            if i == target and j == target:
++                found = True
++    return found
++
++
++def slow_string_concat(strings: list[str]) -> str:
++    """String concatenation in loop - O(n²) complexity."""
++    result = ""
++    # BUG: Performance - repeated string concatenation
++    for s in strings:
++        result = result + s + ", "
++    return result
++
++
++def recursive_fibonacci(n: int) -> int:
++    """Exponential time complexity - extremely inefficient."""
++    # BUG: Performance - O(2^n) complexity without memoization
++    if n <= 1:
++        return n
++    return recursive_fibonacci(n - 1) + recursive_fibonacci(n - 2)
++
++
++def load_all_files_in_memory(directory: str) -> list[str]:
++    """Memory inefficiency - loading everything at once."""
++    files = []
++    # BUG: Performance - loads all files at once, no streaming
++    for filename in os.listdir(directory):
++        with open(os.path.join(directory, filename), 'r') as f:
++            files.append(f.read())
++    return files
++
++
++# ========== COMBINED ISSUES ==========
++
++def process_user_payment(user_id: str, amount: str, payment_method: dict) -> bool:
++    """Multiple issues combined."""
++    # BUG: Security - SQL injection
++    query = f"SELECT balance FROM users WHERE id={user_id}"
++    
++    # BUG: Type mismatch - amount is string but used in math
++    total = float(amount) * 1.1
++    
++    # BUG: Unsafe data handling
++    serialized = pickle.dumps(payment_method)
++    
++    # BUG: Logic - no error handling
++    conn = sqlite3.connect("payments.db")
++    cursor = conn.cursor()
++    # BUG: Another SQL injection
++    update_query = f"UPDATE users SET balance = balance - {amount} WHERE id = '{user_id}'"
++    cursor.execute(update_query)
++    
++    return True
++
++
++if __name__ == "__main__":
++    # BUG: Unused variable
++    test_data = [1, 2, 3, 4, 5]
++    
++    # This would crash at runtime
++    # result = divide_numbers(10, 0)
++    
++    # This would cause an error
++    # total = calculate_total_price([{"qty": 2}])
++    
++    print("Test file loaded - contains intentional bugs for agent detection")
+diff --git a/tests/test_data/app_with_issues.py b/tests/test_data/app_with_issues.py
+new file mode 100644
+index 0000000..711c316
+--- /dev/null
++++ b/tests/test_data/app_with_issues.py
+@@ -0,0 +1,207 @@
++"""Test application with intentional code issues for agent testing.
++
++This file contains:
++- Security issues (SQL injection, hardcoded secrets)
++- Bug detection issues (undefined variables, type mismatches)
++- Style issues (poor naming, inconsistent formatting)
++- Performance issues (inefficient algorithms, unnecessary loops)
++"""
++
++import pickle
++import os
++import subprocess
++from datetime import datetime
++
++
++# ============================================================
++# SECURITY ISSUES
++# ============================================================
++
++def authenticate_user(username, password):
++    """SQL Injection vulnerability."""
++    import sqlite3
++    conn = sqlite3.connect(':memory:')
++    cursor = conn.cursor()
++    
++    # SECURITY BUG: SQL Injection - user input directly concatenated
++    query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"
++    cursor.execute(query)
++    return cursor.fetchone()
++
++
++def fetch_data_from_api(url):
++    """Hardcoded credentials and unvalidated shell execution."""
++    # SECURITY BUG: Hardcoded API key (example format)
++    api_key = "sk_XXXX_HARDCODED_SECRET_DETECTED"
++    
++    # SECURITY BUG: Command injection - url not sanitized
++    result = subprocess.run(f"curl {url}", shell=True, capture_output=True)
++    return result.stdout
++
++
++def deserialize_user_data(data):
++    """Unsafe deserialization."""
++    # SECURITY BUG: pickle.loads() on untrusted data
++    return pickle.loads(data)
++
++
++def log_user_action(user_id, action):
++    """Information disclosure."""
++    # SECURITY BUG: Sensitive data in logs
++    github_token = os.environ.get('GITHUB_TOKEN')
++    with open('/tmp/user_actions.log', 'a') as f:
++        f.write(f"User {user_id} performed {action} with token {github_token}\n")
++
++
++# ============================================================
++# BUG DETECTION ISSUES
++# ============================================================
++
++def calculate_total(items):
++    """Undefined variable bug."""
++    # BUG: 'total' is used before being defined
++    for item in items:
++        total += item['price']
++    return total
++
++
++def process_user_data(user_dict):
++    """Type mismatch and attribute error."""
++    # BUG: Treating string as dict
++    name = user_dict['name']
++    age = user_dict['age']
++    
++    # BUG: Trying to call string method on potential None
++    email = user_dict.get('email')
++    domain = email.split('@')[1]
++    
++    return f"{name} ({age}): {domain}"
++
++
++def divide_numbers(a, b):
++    """Division by zero."""
++    # BUG: No check for b == 0
++    return a / b
++
++
++def read_file_unsafe(filename):
++    """File handling without proper error handling."""
++    # BUG: No try-except, file may not exist
++    with open(filename) as f:
++        return f.read()
++
++
++# ============================================================
++# STYLE ISSUES
++# ============================================================
++
++def x(a,b,c):
++    """Poor naming and formatting."""
++    # STYLE: Single-letter variable names, no spacing
++    r=a+b+c
++    return r
++
++
++class MyClass:
++    """Inconsistent naming conventions."""
++    
++    def __init__(self):
++        self.myVar = 1
++        self.MY_VAR_2 = 2
++        self._privateStuff = 3
++    
++    def do_something(self):
++        """Method with no docstring."""
++        pass
++    
++    def DoAnotherThing(self):
++        """Inconsistent naming: PascalCase instead of snake_case."""
++        pass
++
++
++def long_line_function():
++    """Line too long and too many statements on one line."""
++    x = 1; y = 2; z = 3; result = x + y + z; print(result); return result  # This is way too long and has multiple statements
++
++
++# ============================================================
++# PERFORMANCE ISSUES
++# ============================================================
++
++def find_duplicate_inefficient(items):
++    """O(n²) algorithm when O(n) is possible."""
++    duplicates = []
++    # PERFORMANCE: Nested loops - inefficient O(n²)
++    for i in range(len(items)):
++        for j in range(i+1, len(items)):
++            if items[i] == items[j]:
++                duplicates.append(items[i])
++    return duplicates
++
++
++def fibonacci_recursive(n):
++    """Exponential time complexity."""
++    # PERFORMANCE: Recursive without memoization - O(2^n)
++    if n <= 1:
++        return n
++    return fibonacci_recursive(n-1) + fibonacci_recursive(n-2)
++
++
++def process_list_inefficient(data):
++    """Creating unnecessary copies and intermediate lists."""
++    # PERFORMANCE: Multiple unnecessary iterations and list copies
++    result = []
++    for item in data:
++        if item > 0:
++            result.append(item)
++    
++    # PERFORMANCE: Creating intermediate list, then filtering again
++    filtered = [x for x in result if x < 100]
++    
++    # PERFORMANCE: Another unnecessary loop
++    final = []
++    for x in filtered:
++        final.append(x * 2)
++    
++    return final
++
++
++def memory_leak_potential():
++    """Potential memory leak with growing list."""
++    cache = []
++    # PERFORMANCE: Growing list without bounds
++    def add_to_cache(item):
++        cache.append(item)
++        return cache
++    
++    return add_to_cache
++
++
++# ============================================================
++# MIXED ISSUES
++# ============================================================
++
++def unsafe_database_operation(user_id, user_input):
++    """Combines multiple issues."""
++    import sqlite3
++    
++    # BUG: No type checking
++    conn = sqlite3.connect(':memory:')
++    cursor = conn.cursor()
++    
++    # SECURITY: SQL Injection
++    cursor.execute(f"SELECT * FROM users WHERE id={user_id} AND query LIKE '%{user_input}%'")
++    
++    # PERFORMANCE: Fetching all rows when might only need one
++    rows = cursor.fetchall()
++    
++    # BUG: IndexError if no rows returned
++    return rows[0]
++
++
++if __name__ == "__main__":
++    # SECURITY: Hardcoded secret (should use env vars instead)
++    SECRET = "password_XXXX_should_use_env_vars"
++    
++    # This is test code
++    print("This file contains intentional issues for testing the multi-agent code review system")

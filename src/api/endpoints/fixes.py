@@ -33,10 +33,18 @@ class ReviewFixAction(BaseModel):
     action: str  # "approve" | "reject"
 
 
+class ApplyFixesRequest(BaseModel):
+    """Request to apply approved fixes with optional severity filter."""
+    severity_levels: list[str] = ["critical", "high", "medium"]  # which severities to fix
+
+
 class ApplyFixesResponse(BaseModel):
     committed: int
     failed: int
     commit_shas: dict[str, str]  # {category: sha}
+    analysis_duration_seconds: float | None = None
+    total_duration_seconds: float | None = None
+    fixed_severity_levels: list[str] = []
 
 
 class RunTestsRequest(BaseModel):
@@ -112,15 +120,27 @@ async def review_fix(review_id: str, fix_id: str, body: ReviewFixAction) -> dict
 # ---------------------------------------------------------------------------
 
 @router.post("/reviews/{review_id}/fixes/apply")
-async def apply_approved_fixes(review_id: str) -> ApplyFixesResponse:
+async def apply_approved_fixes(review_id: str, body: ApplyFixesRequest | None = None) -> ApplyFixesResponse:
+    from datetime import datetime, timezone
+    
     review = _get_review(review_id)
+    severity_levels = body.severity_levels if body else ["critical", "high", "medium"]
 
-    approved = [p for p in review.proposed_fixes if p.status == FixStatus.APPROVED]
+    # Filter approved fixes by severity level
+    approved = [
+        p for p in review.proposed_fixes 
+        if p.status == FixStatus.APPROVED and p.severity in severity_levels
+    ]
     if not approved:
-        raise HTTPException(status_code=400, detail="No approved fixes to apply")
+        raise HTTPException(
+            status_code=400, 
+            detail=f"No approved fixes found for severity levels: {severity_levels}"
+        )
 
     pr = review.pr_info
-    branch = pr.head_branch or "main"
+    # Create a new branch for fixes from the base branch (not the head branch)
+    base_branch = pr.base_branch or "main"
+    fix_branch = f"fixes/{review_id[:8]}"
 
     from src.agents.fix.agent import FixAgent
     from src.services.git_service import GitService
@@ -128,10 +148,17 @@ async def apply_approved_fixes(review_id: str) -> ApplyFixesResponse:
     commit_shas: dict[str, str] = {}
     committed = 0
     failed = 0
+    apply_started = time.monotonic()
 
     async with GitService() as git:
+        # Ensure the fix branch exists (create from base if it doesn't)
+        try:
+            await git.create_ref(pr.owner, pr.repo, fix_branch, pr.base_sha or "HEAD")
+        except Exception as e:
+            logger.warning(f"Branch {fix_branch} may already exist or could not be created: {e}")
+        
         agent = FixAgent(git=git)
-        await agent.commit_approved(approved, pr.owner, pr.repo, branch)
+        await agent.commit_approved(approved, pr.owner, pr.repo, fix_branch)
 
     for p in approved:
         if p.status == FixStatus.COMMITTED:
@@ -141,9 +168,23 @@ async def apply_approved_fixes(review_id: str) -> ApplyFixesResponse:
         else:
             failed += 1
 
+    apply_duration = round(time.monotonic() - apply_started, 2)
+    
     review.total_fixes = committed
-    if committed > 0 and review.pr_info.html_url:
-        review.fix_pr_url = review.pr_info.html_url
+    review.fix_commits = commit_shas
+    review.fix_severity_levels = severity_levels
+    review.fixes_applied_at = datetime.now(timezone.utc)
+    
+    if committed > 0:
+        # Set the fix branch name
+        review.fix_branch = fix_branch
+        
+        # Build commit URL from the first commit SHA
+        if commit_shas:
+            first_sha = next(iter(commit_shas.values()))
+            review.fix_pr_url = (
+                f"https://github.com/{pr.owner}/{pr.repo}/commit/{first_sha}"
+            )
 
     from src.api.endpoints.sse import publish_event
     await publish_event(
@@ -153,11 +194,26 @@ async def apply_approved_fixes(review_id: str) -> ApplyFixesResponse:
             "committed_count": committed,
             "failed_count": failed,
             "commit_shas": commit_shas,
+            "apply_duration_seconds": apply_duration,
         },
     )
 
-    logger.info("fixes_applied", review_id=review_id, committed=committed, failed=failed)
-    return ApplyFixesResponse(committed=committed, failed=failed, commit_shas=commit_shas)
+    logger.info(
+        "fixes_applied",
+        review_id=review_id,
+        committed=committed,
+        failed=failed,
+        severity_levels=severity_levels,
+        apply_duration_seconds=apply_duration,
+    )
+    return ApplyFixesResponse(
+        committed=committed,
+        failed=failed,
+        commit_shas=commit_shas,
+        analysis_duration_seconds=review.analysis_duration_seconds,
+        total_duration_seconds=review.total_duration_seconds,
+        fixed_severity_levels=severity_levels,
+    )
 
 
 # ---------------------------------------------------------------------------

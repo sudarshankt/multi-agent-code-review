@@ -7,6 +7,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from src.models.finding import Finding
+from src.models.fix import ProposedFix
 from src.models.review import ReviewStatus
 
 
@@ -41,10 +42,20 @@ class ReviewDetailResponse(BaseModel):
     pr_number: int
     pr_title: str | None = None
     pr_author: str | None = None
+    pr_url: str | None = None
+    pr_head_branch: str | None = None
     findings_by_category: dict[str, list[Finding]] = Field(default_factory=dict)
+    proposed_fixes: list[ProposedFix] = Field(default_factory=list)
     total_findings: int = 0
     total_fixes: int = 0
+    fix_branch: str | None = None
     fix_pr_url: str | None = None
+    fix_commit_url: str | None = None
+    fix_commits: dict[str, str] = Field(default_factory=dict)
+    fix_severity_levels: list[str] = Field(default_factory=list)
+    analysis_duration_seconds: float | None = None
+    total_duration_seconds: float | None = None
+    tokens_used: int = 0
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None = None

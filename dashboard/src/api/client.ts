@@ -112,9 +112,46 @@ export interface FixEvalReport {
   models: FixModelMetrics[]
 }
 
+export interface PipelineCaseResult {
+  finding: EvalCaseResult
+  fix_attempted: boolean
+  fix_success: boolean
+  syntax_valid?: boolean | null
+  fix_error?: string | null
+  judge?: FixJudgeScore | null
+}
+
+export interface PipelineMetrics {
+  agent_name: string
+  cases: number
+  true_positives: number
+  false_positives: number
+  false_negatives: number
+  precision: number
+  recall: number
+  f1: number
+  avg_similarity: number
+  fix_attempted: number
+  fix_success_rate: number
+  syntax_valid_rate: number
+  resolved_rate: number
+  pipeline_resolved_rate: number
+  avg_correctness: number
+  avg_safety: number
+  avg_minimality: number
+  avg_explanation_quality: number
+  case_results: PipelineCaseResult[]
+}
+
+export interface E2EReport {
+  generated_at: string
+  agents: PipelineMetrics[]
+}
+
 export const evalAPI = {
   getLatest: () => api.get<EvalReport>('/eval/latest'),
   getLatestFix: () => api.get<FixEvalReport>('/eval/latest-fix'),
+  getLatestE2E: () => api.get<E2EReport>('/eval/latest-e2e'),
 }
 
 export const reviewAPI = {

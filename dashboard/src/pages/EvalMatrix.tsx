@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { evalAPI, EvalReport, FixEvalReport } from '../api/client'
+import { evalAPI, EvalReport, FixEvalReport, E2EReport } from '../api/client'
 import { AlertTriangle, Bug, Zap, Eye, AlertCircle } from 'lucide-react'
 
 const categoryIcons: Record<string, React.ReactNode> = {
@@ -24,6 +24,10 @@ export const EvalMatrixPage: React.FC = () => {
   const [fixLoading, setFixLoading] = useState(true)
   const [fixError, setFixError] = useState<string | null>(null)
 
+  const [e2eReport, setE2eReport] = useState<E2EReport | null>(null)
+  const [e2eLoading, setE2eLoading] = useState(true)
+  const [e2eError, setE2eError] = useState<string | null>(null)
+
   useEffect(() => {
     evalAPI
       .getLatest()
@@ -36,6 +40,12 @@ export const EvalMatrixPage: React.FC = () => {
       .then((res) => setFixReport(res.data))
       .catch((err) => setFixError(err?.response?.data?.detail || 'Failed to load fix-eval report'))
       .finally(() => setFixLoading(false))
+
+    evalAPI
+      .getLatestE2E()
+      .then((res) => setE2eReport(res.data))
+      .catch((err) => setE2eError(err?.response?.data?.detail || 'Failed to load e2e-eval report'))
+      .finally(() => setE2eLoading(false))
   }, [])
 
   if (loading) {
@@ -223,6 +233,145 @@ export const EvalMatrixPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+      )}
+
+      <h1 className="text-2xl font-bold mb-1 mt-12">End-to-End Pipeline (Finding → Fix)</h1>
+      <p className="text-sm text-gray-500 mb-6">
+        Live finding-agent output matched against golden findings, then fed straight into the fix
+        agent. <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">Pipeline</code> only
+        counts a file as resolved if every expected finding was caught <em>and</em> the resulting
+        fix was judged resolved — it stays low even when the fix agent alone looks good, whenever
+        the finding agent misses something upstream.
+      </p>
+
+      {e2eLoading ? (
+        <div className="text-gray-500">Loading e2e-eval matrix...</div>
+      ) : e2eError || !e2eReport ? (
+        <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+          <AlertCircle className="w-5 h-5" />
+          {e2eError || 'No e2e-eval report available'}
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto bg-white rounded-lg shadow">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-4 py-2 text-left font-semibold">Agent</th>
+                  <th className="px-4 py-2 text-right font-semibold">TP</th>
+                  <th className="px-4 py-2 text-right font-semibold">FP</th>
+                  <th className="px-4 py-2 text-right font-semibold">FN</th>
+                  <th className="px-4 py-2 text-right font-semibold">Precision</th>
+                  <th className="px-4 py-2 text-right font-semibold">Recall</th>
+                  <th className="px-4 py-2 text-right font-semibold">F1</th>
+                  <th className="px-4 py-2 text-right font-semibold">Fix OK</th>
+                  <th className="px-4 py-2 text-right font-semibold">Resolved</th>
+                  <th className="px-4 py-2 text-right font-semibold">Pipeline</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {e2eReport.agents.map((m) => (
+                  <tr key={m.agent_name} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 font-medium flex items-center gap-2">
+                      {categoryIcons[m.agent_name] || '—'}
+                      {m.agent_name}
+                    </td>
+                    <td className="px-4 py-2 text-right">{m.true_positives}</td>
+                    <td className="px-4 py-2 text-right">{m.false_positives}</td>
+                    <td className="px-4 py-2 text-right">{m.false_negatives}</td>
+                    <td className="px-4 py-2 text-right">
+                      <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.precision)}`}>
+                        {m.precision.toFixed(3)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.recall)}`}>
+                        {m.recall.toFixed(3)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.f1)}`}>
+                        {m.f1.toFixed(3)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.fix_success_rate)}`}>
+                        {m.fix_success_rate.toFixed(3)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.resolved_rate)}`}>
+                        {m.resolved_rate.toFixed(3)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.pipeline_resolved_rate)}`}>
+                        {m.pipeline_resolved_rate.toFixed(3)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-8 space-y-6">
+            {e2eReport.agents.map((m) => (
+              <div key={m.agent_name} className="bg-white rounded-lg shadow p-4">
+                <h2 className="font-semibold mb-3 flex items-center gap-2">
+                  {categoryIcons[m.agent_name] || '—'}
+                  {m.agent_name} — per-file pipeline outcome
+                </h2>
+                {m.case_results.map((c) => (
+                  <div key={c.finding.file} className="mb-3 text-xs">
+                    <div className="font-mono text-gray-600 mb-1">{c.finding.file}</div>
+                    {c.finding.matched.length === 0 &&
+                    c.finding.missed.length === 0 &&
+                    c.finding.unexpected.length === 0 ? (
+                      <div className="text-gray-400">No expected findings for this file.</div>
+                    ) : (
+                      <>
+                        <ul className="list-disc list-inside space-y-0.5">
+                          {c.finding.matched.map((pair, i) => (
+                            <li key={`matched-${i}`} className="text-green-700">
+                              Matched: {pair.expected.description} (line {pair.actual_start_line ?? '?'})
+                            </li>
+                          ))}
+                          {c.finding.missed.map((f, i) => (
+                            <li key={`missed-${i}`} className="text-red-700">
+                              Missed: {f.description} (line {f.start_line}) — never reached the fix agent
+                            </li>
+                          ))}
+                          {c.finding.unexpected.map((title, i) => (
+                            <li key={`unexpected-${i}`} className="text-yellow-700">
+                              Unexpected: {title}
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="mt-1">
+                          {!c.fix_attempted ? (
+                            <span className="text-gray-400">Fix not attempted (nothing matched).</span>
+                          ) : (
+                            <span
+                              className={`px-2 py-0.5 rounded border text-xs font-semibold ${
+                                c.judge?.resolved
+                                  ? 'bg-green-100 text-green-800 border-green-300'
+                                  : 'bg-red-100 text-red-800 border-red-300'
+                              }`}
+                            >
+                              Fix {c.fix_success ? 'succeeded' : 'failed'}
+                              {c.judge ? `, judge: ${c.judge.resolved ? 'resolved' : 'not resolved'}` : ''}
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )

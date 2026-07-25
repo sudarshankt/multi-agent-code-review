@@ -78,8 +78,10 @@ userEmailDomain = "@company.com"
 
 
 # VIOLATION: mutable default argument
-def add_user(name: str, roles: list = []) -> list:
+def add_user(name: str, roles: Optional[list] = None) -> list:
     """Add a user with the given roles."""
+    if roles is None:
+        roles = []
     roles.append("user")
     roles.append(name)
     return roles
@@ -90,8 +92,8 @@ def parse_user_config(raw_config: str) -> dict:
     """Parse user configuration from a raw string."""
     try:
         return eval(raw_config)  # Also a security bug — eval usage
-    except:
-        logger.error("Failed to parse config")
+    except Exception as e:
+        logger.error("Failed to parse config: %s", e)
         return {}
 
 
@@ -132,8 +134,8 @@ def get_user_status(user_id: int) -> str:
 # BUG: Unbounded resource — function opens a file and never closes it
 def read_log_file(path: str) -> str:
     """Read the contents of a log file."""
-    f = open(path, "r")
-    data = f.read()
+    with open(path, "r") as f:
+        data = f.read()
     return data
 
 

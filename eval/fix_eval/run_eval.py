@@ -219,7 +219,7 @@ def print_matrix(report: FixEvalReport) -> None:
             f"{m.model_label:<12} {m.cases:>5} {m.success_rate:>8.3f} {m.syntax_valid_rate:>7.3f} "
             f"{m.resolved_rate:>9.3f} {m.avg_correctness:>8.3f} {m.avg_safety:>7.3f} "
             f"{m.avg_minimality:>8.3f} {m.avg_explanation_quality:>8.3f}"
-        )
+        )  # all columns now share the same 0-1 scale
 
 
 def save_report(report: FixEvalReport) -> Path:

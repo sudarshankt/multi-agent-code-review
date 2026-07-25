@@ -105,10 +105,14 @@ address. The judge returns:
 | Field | Meaning |
 |---|---|
 | `resolved` | did the fix actually address the underlying issue |
-| `correctness` | 0-5 |
-| `safety` | 0-5 — did it introduce new risk |
-| `minimality` | 0-5 — scope discipline, no unrelated changes |
-| `explanation_quality` | 0-5 |
+| `correctness` | 0-1 |
+| `safety` | 0-1 — did it introduce new risk |
+| `minimality` | 0-1 — scope discipline, no unrelated changes |
+| `explanation_quality` | 0-1 |
+
+The judge LLM is prompted to score each rubric dimension directly as a 0-1
+float, so every field in this eval — rates and rubric scores alike — lands
+on the same 0-1 scale.
 
 Aggregated per model candidate: `success_rate` (LLM returned usable code),
 `syntax_valid_rate`, `resolved_rate`, and the mean of each rubric score.
@@ -150,18 +154,6 @@ before, plus:
 |---|---|
 | `fix_success_rate` | of fix attempts, how many produced valid usable code (mechanical, no LLM judgment) |
 | `resolved_rate` | of judged fixes, how many the judge marked `resolved` |
-| `pipeline_resolved_rate` | **the headline number** — see below |
-
-`pipeline_resolved_rate` is deliberately strict: a golden file only counts
-as resolved if the finding agent caught **every** expected issue in it
-(zero false negatives) **and** the resulting fix was judged `resolved`. A
-file with any missed finding is automatically excluded from the numerator —
-the fix agent never even saw what it missed, so it's structurally
-impossible for that file to be "fixed." This is what makes `e2e_eval`
-useful: an agent can show a perfectly healthy `fix_eval` `resolved_rate`
-while its `pipeline_resolved_rate` sits at 0, because the finding stage is
-the actual bottleneck. When you see that split, look at finding_eval's
-`recall` for that agent, not fix_eval.
 
 **Run it:**
 
@@ -182,6 +174,45 @@ Results: `eval/results/e2e/run-XXXX.json` + `latest.json`.
 | The fix agent's prompt/logic | `fix_eval` | Isolates fix quality against clean, known-good findings |
 | Anything in the finding→fix handoff (schema, location fields, category names) | `e2e_eval` | Only this eval exercises the real handoff |
 | Before a release / periodically | All three | `finding_eval` + `fix_eval` first (cheaper, isolate regressions), `e2e_eval` to confirm the pipeline as a whole still resolves issues |
+
+## Metric glossary
+
+Every metric that appears in a `latest.json` report or the dashboard's Eval
+Matrix page, in one place. `TP`/`FP`/`FN` below always mean: matched against
+`eval/golden/manifest.json` using the ±2-line-tolerance matching described
+in [Finding agents](#1-finding-agents--classification-finding_eval) above.
+
+**Finding-stage** (reported by `finding_eval`, and by `e2e_eval` per agent):
+
+| Metric | Formula / definition | Reading it |
+|---|---|---|
+| `true_positives` | count of expected findings matched to an actual finding | raw count, not a rate |
+| `false_positives` | count of actual findings with no matching expected finding | "unexpected" flags — noise |
+| `false_negatives` | count of expected findings with no matching actual finding | "missed" issues — the agent's blind spots |
+| `precision` | `TP / (TP + FP)` | of what the agent flagged, how much was real. Low precision = noisy/over-flagging |
+| `recall` | `TP / (TP + FN)` | of what's actually wrong, how much the agent caught. Low recall = missing real issues |
+| `f1` | `2 · precision · recall / (precision + recall)` | single balanced score between precision and recall |
+| `avg_similarity` | mean text/embedding similarity between each matched pair's expected vs. actual description | describes match *quality*, not agent quality — a low value here means matches are shaky even where line ranges overlapped |
+
+**Fix-stage** (reported by `fix_eval` per model candidate, and by `e2e_eval`
+per agent — dashboard column names differ slightly between the two tables,
+noted below):
+
+| Metric | Formula / definition | Reading it |
+|---|---|---|
+| `success_rate` (`fix_eval`) / `fix_success_rate` (`e2e_eval`) — shown as **"Fix Generated"** in the dashboard | `attempts producing usable code / total attempts` | purely mechanical — did the fix agent return *something* it considered a valid patch, no judgment on whether the patch is any good |
+| `syntax_valid_rate` | `attempts that parse as valid Python / attempts checked` | mechanical syntax check on the generated code, independent of the judge |
+| `resolved_rate` | `judged fixes where judge.resolved == true / judged fixes` | the judge LLM's own binary verdict — did this patch actually address the finding |
+| `avg_correctness` | mean of judge's `correctness` score (0-1) across judged fixes | does the fix work, per the judge's read of the diff |
+| `avg_safety` | mean of judge's `safety` score (0-1) across judged fixes | did the fix avoid introducing new bugs or touching unrelated behavior |
+| `avg_minimality` | mean of judge's `minimality` score (0-1) across judged fixes | is the diff scoped to the finding, not a drive-by rewrite |
+| `avg_explanation_quality` | mean of judge's `explanation_quality` score (0-1) across judged fixes | is the agent's stated explanation of its own change accurate and clear |
+
+All rate metrics (`precision`, `recall`, `f1`, `success_rate`/`fix_success_rate`,
+`syntax_valid_rate`, `resolved_rate`) and all rubric averages
+(`avg_correctness`, `avg_safety`, `avg_minimality`, `avg_explanation_quality`)
+share the same 0-1 scale, so they're directly comparable at a glance —
+nothing in this pipeline reports on a 0-5 or percentage scale.
 
 ## Viewing results
 

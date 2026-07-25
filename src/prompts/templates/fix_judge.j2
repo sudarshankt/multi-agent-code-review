@@ -19,7 +19,7 @@ Candidate fixed file content:
 
 Agent's stated explanation of the change: {{ explanation or "(none provided)" }}
 
-Score the candidate fix on these dimensions, each 0-5 (0 = fails completely, 5 = excellent):
+Score the candidate fix on these dimensions, each a float from 0 to 1 (0 = fails completely, 1 = excellent; use fine-grained values like 0.2, 0.6, 0.85, not just 0/0.5/1):
 - correctness: does the fixed code actually resolve the findings listed above?
 - safety: does the fix avoid introducing new bugs/vulnerabilities and preserve unrelated behavior?
 - minimality: is the change focused, rather than an unnecessary rewrite of the file?
@@ -28,10 +28,10 @@ Score the candidate fix on these dimensions, each 0-5 (0 = fails completely, 5 =
 Return ONLY a JSON object (no prose, no markdown fences):
 {
   "resolved": true|false,
-  "correctness": 0-5,
-  "safety": 0-5,
-  "minimality": 0-5,
-  "explanation_quality": 0-5,
+  "correctness": 0-1,
+  "safety": 0-1,
+  "minimality": 0-1,
+  "explanation_quality": 0-1,
   "regression_risk": "none"|"low"|"medium"|"high",
   "notes": "one line summary of your reasoning"
 }

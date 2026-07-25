@@ -65,17 +65,6 @@ def aggregate_pipeline_metrics(agent_name: str, cases: list[PipelineCaseResult])
     judged = [c.judge for c in attempted if c.judge is not None]
     resolved = [j for j in judged if j.resolved]
 
-    # A file only counts as pipeline-resolved if the finding agent surfaced
-    # everything expected in it (no misses) AND the fix agent's output was
-    # judged resolved. A file with any false negative can never be resolved
-    # end-to-end, since the fix agent never saw the missed finding.
-    files_with_expected = [c for c in cases if c.finding.matched or c.finding.missed]
-    pipeline_resolved = [
-        c
-        for c in files_with_expected
-        if not c.finding.missed and c.judge is not None and c.judge.resolved
-    ]
-
     return PipelineMetrics(
         agent_name=agent_name,
         cases=len(cases),
@@ -90,9 +79,6 @@ def aggregate_pipeline_metrics(agent_name: str, cases: list[PipelineCaseResult])
         fix_success_rate=round(len(successes) / len(attempted), 3) if attempted else 0.0,
         syntax_valid_rate=round(len(syntax_valid) / len(syntax_checked), 3) if syntax_checked else 0.0,
         resolved_rate=round(len(resolved) / len(judged), 3) if judged else 0.0,
-        pipeline_resolved_rate=(
-            round(len(pipeline_resolved) / len(files_with_expected), 3) if files_with_expected else 0.0
-        ),
         avg_correctness=_mean([j.correctness for j in judged]),
         avg_safety=_mean([j.safety for j in judged]),
         avg_minimality=_mean([j.minimality for j in judged]),

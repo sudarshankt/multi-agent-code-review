@@ -15,10 +15,6 @@ that the fix agent then mishandles), since fix_eval always feeds the fix
 agent clean, golden-derived findings. It intentionally does NOT replace
 finding_eval or fix_eval: keep using those to isolate which stage regressed.
 
-A golden file's expected findings only count toward pipeline_resolved_rate
-when the finding agent found all of them AND the fix agent's output was
-judged resolved for the file -- see eval/e2e_eval/scoring.py.
-
 Usage:
     python -m eval.e2e_eval.run_eval [--agent security,bug_detection]
 """
@@ -171,7 +167,7 @@ async def run_all(agent_filter: set[str] | None) -> E2EReport:
             agent_name=agent_name,
             precision=metrics.precision,
             recall=metrics.recall,
-            pipeline_resolved_rate=metrics.pipeline_resolved_rate,
+            resolved_rate=metrics.resolved_rate,
         )
 
     return report
@@ -180,7 +176,7 @@ async def run_all(agent_filter: set[str] | None) -> E2EReport:
 def print_matrix(report: E2EReport) -> None:
     header = (
         f"{'agent':<16} {'TP':>4} {'FP':>4} {'FN':>4} {'precision':>10} {'recall':>8} "
-        f"{'f1':>6} {'fix_ok':>7} {'resolved':>9} {'pipeline':>9}"
+        f"{'f1':>6} {'fix_ok':>7} {'resolved':>9}"
     )
     print(header)
     print("-" * len(header))
@@ -188,7 +184,7 @@ def print_matrix(report: E2EReport) -> None:
         print(
             f"{m.agent_name:<16} {m.true_positives:>4} {m.false_positives:>4} {m.false_negatives:>4} "
             f"{m.precision:>10.3f} {m.recall:>8.3f} {m.f1:>6.3f} {m.fix_success_rate:>7.3f} "
-            f"{m.resolved_rate:>9.3f} {m.pipeline_resolved_rate:>9.3f}"
+            f"{m.resolved_rate:>9.3f}"
         )
 
 

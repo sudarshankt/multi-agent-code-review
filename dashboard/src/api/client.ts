@@ -135,7 +135,6 @@ export interface PipelineMetrics {
   fix_success_rate: number
   syntax_valid_rate: number
   resolved_rate: number
-  pipeline_resolved_rate: number
   avg_correctness: number
   avg_safety: number
   avg_minimality: number

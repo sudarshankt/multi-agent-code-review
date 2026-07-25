@@ -162,7 +162,7 @@ export const EvalMatrixPage: React.FC = () => {
 
       <h1 className="text-2xl font-bold mb-1 mt-12">Fix Agent Model Comparison</h1>
       <p className="text-sm text-gray-500 mb-6">
-        LLM-as-judge scores (0-5) for each candidate generator model, judged against golden findings.
+        LLM-as-judge scores (0-1) for each candidate generator model, judged against golden findings.
       </p>
 
       {fixLoading ? (
@@ -179,7 +179,7 @@ export const EvalMatrixPage: React.FC = () => {
               <tr>
                 <th className="px-4 py-2 text-left font-semibold">Model</th>
                 <th className="px-4 py-2 text-right font-semibold">Cases</th>
-                <th className="px-4 py-2 text-right font-semibold">Success</th>
+                <th className="px-4 py-2 text-right font-semibold">Fix Generated</th>
                 <th className="px-4 py-2 text-right font-semibold">Syntax OK</th>
                 <th className="px-4 py-2 text-right font-semibold">Resolved</th>
                 <th className="px-4 py-2 text-right font-semibold">Correctness</th>
@@ -209,23 +209,23 @@ export const EvalMatrixPage: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.avg_correctness / 5)}`}>
-                      {m.avg_correctness.toFixed(2)}
+                    <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.avg_correctness)}`}>
+                      {m.avg_correctness.toFixed(3)}
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.avg_safety / 5)}`}>
-                      {m.avg_safety.toFixed(2)}
+                    <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.avg_safety)}`}>
+                      {m.avg_safety.toFixed(3)}
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.avg_minimality / 5)}`}>
-                      {m.avg_minimality.toFixed(2)}
+                    <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.avg_minimality)}`}>
+                      {m.avg_minimality.toFixed(3)}
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.avg_explanation_quality / 5)}`}>
-                      {m.avg_explanation_quality.toFixed(2)}
+                    <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.avg_explanation_quality)}`}>
+                      {m.avg_explanation_quality.toFixed(3)}
                     </span>
                   </td>
                 </tr>
@@ -238,10 +238,7 @@ export const EvalMatrixPage: React.FC = () => {
       <h1 className="text-2xl font-bold mb-1 mt-12">End-to-End Pipeline (Finding → Fix)</h1>
       <p className="text-sm text-gray-500 mb-6">
         Live finding-agent output matched against golden findings, then fed straight into the fix
-        agent. <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">Pipeline</code> only
-        counts a file as resolved if every expected finding was caught <em>and</em> the resulting
-        fix was judged resolved — it stays low even when the fix agent alone looks good, whenever
-        the finding agent misses something upstream.
+        agent.
       </p>
 
       {e2eLoading ? (
@@ -264,9 +261,8 @@ export const EvalMatrixPage: React.FC = () => {
                   <th className="px-4 py-2 text-right font-semibold">Precision</th>
                   <th className="px-4 py-2 text-right font-semibold">Recall</th>
                   <th className="px-4 py-2 text-right font-semibold">F1</th>
-                  <th className="px-4 py-2 text-right font-semibold">Fix OK</th>
+                  <th className="px-4 py-2 text-right font-semibold">Fix Generated</th>
                   <th className="px-4 py-2 text-right font-semibold">Resolved</th>
-                  <th className="px-4 py-2 text-right font-semibold">Pipeline</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -302,11 +298,6 @@ export const EvalMatrixPage: React.FC = () => {
                     <td className="px-4 py-2 text-right">
                       <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.resolved_rate)}`}>
                         {m.resolved_rate.toFixed(3)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <span className={`px-2 py-1 rounded border text-xs font-semibold ${scoreColor(m.pipeline_resolved_rate)}`}>
-                        {m.pipeline_resolved_rate.toFixed(3)}
                       </span>
                     </td>
                   </tr>

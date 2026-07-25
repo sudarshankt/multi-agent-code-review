@@ -20,7 +20,12 @@ class ModelCandidate(BaseModel):
 
 
 class JudgeScore(BaseModel):
-    """A judge LLM's rubric scores for one fix."""
+    """A judge LLM's rubric scores for one fix.
+
+    correctness/safety/minimality/explanation_quality are all 0-1 floats
+    (see src/prompts/templates/fix_judge.j2), so every metric in this eval
+    sits on the same 0-1 scale.
+    """
 
     resolved: bool
     correctness: float

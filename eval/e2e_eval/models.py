@@ -44,7 +44,6 @@ class PipelineMetrics(BaseModel):
     fix_success_rate: float
     syntax_valid_rate: float
     resolved_rate: float  # judge.resolved rate, among fix attempts that were judged
-    pipeline_resolved_rate: float  # end-to-end: found (fully) AND fixed AND judged resolved
     avg_correctness: float
     avg_safety: float
     avg_minimality: float

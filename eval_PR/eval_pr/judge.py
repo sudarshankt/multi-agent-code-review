@@ -211,7 +211,7 @@ def _call_judge_llm(prompt: str, model: str = JUDGE_MODEL, api_keys: dict | None
                 elif hasattr(block, 'type') and block.type == 'thinking':
                     continue
                 # Fallback: check for text attribute directly (for other block types)
-                elif hasattr(block, 'text') and not hasattr(block, 'type') == 'thinking':
+                elif hasattr(block, 'text') and not (hasattr(block, 'type') and block.type == 'thinking'):
                     text_content += block.text
             return text_content if text_content else "{}"
     except Exception as e:
@@ -335,7 +335,7 @@ def audit_pr(pr: str, fixed_output: str, judge_model: str = JUDGE_MODEL, api_key
     # If wrapped in markdown code blocks, extract the JSON
     if "```" in raw:
         import re
-        match = re.search(r"```(?:json)?\s*(\{[^`]*?\})\s*```", raw, re.DOTALL)
+        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
         if match:
             json_str = match.group(1)
             logger.debug(f"audit_pr: extracted JSON from markdown code block ({len(json_str)} chars)")
@@ -369,7 +369,7 @@ def audit_pr(pr: str, fixed_output: str, judge_model: str = JUDGE_MODEL, api_key
             for i, char in enumerate(raw):
                 if char == '{':
                     brace_count = 0
-                    for j in range(i, min(i + 50000, len(raw))):  # Limit search to 50KB
+                    for j in range(i, len(raw)):
                         if raw[j] == '{':
                             brace_count += 1
                         elif raw[j] == '}':

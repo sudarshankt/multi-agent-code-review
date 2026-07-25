@@ -58,7 +58,8 @@ if "result" not in st.session_state:
 if "pr_label" not in st.session_state:
     st.session_state.pr_label = "PR"
 if "max_tokens" not in st.session_state:
-    st.session_state.max_tokens = 3000
+    from eval_pr.config import MAX_TOKENS as _DEFAULT_MAX_TOKENS
+    st.session_state.max_tokens = _DEFAULT_MAX_TOKENS
 if "pr_text" not in st.session_state:
     st.session_state.pr_text = ""
 if "fixed_output_text" not in st.session_state:
@@ -90,18 +91,26 @@ else:
 # ============================================================================
 
 def fetch_pr_diff(pr_link: str) -> tuple[str, str]:
-    """Fetch PR diff using gh CLI."""
+    """Fetch PR diff using gh CLI, targeting the repo parsed from the PR URL
+    (not the cwd's default repo) so this works for any owner/repo."""
     import subprocess
     try:
-        pr_number = pr_link.split("/pull/")[-1].split("?")[0]
+        if "/pull/" not in pr_link:
+            return None, "Invalid PR URL — expected .../owner/repo/pull/123"
+        repo_part, pr_number = pr_link.split("/pull/")
+        pr_number = pr_number.split("?")[0].split("/")[0].strip()
+        parts = repo_part.replace("https://github.com/", "").replace("http://github.com/", "").strip("/").split("/")
+        if len(parts) < 2:
+            return None, "Invalid PR URL — could not determine owner/repo"
+        owner, repo = parts[0], parts[1]
         result = subprocess.run(
-            ["gh", "pr", "diff", pr_number],
+            ["gh", "pr", "diff", pr_number, "-R", f"{owner}/{repo}"],
             capture_output=True,
             text=True,
             timeout=10,
         )
         if result.returncode == 0:
-            return result.stdout, f"PR #{pr_number}"
+            return result.stdout, f"PR #{pr_number} ({owner}/{repo})"
         else:
             return None, f"Failed to fetch PR: {result.stderr[:200]}"
     except Exception as e:
@@ -334,7 +343,14 @@ with st.sidebar:
     )
     
     # Max tokens
-    max_tokens = st.slider("Max Tokens", 1000, 8000, 3000, step=500)
+    max_tokens = st.slider(
+        "Max Tokens",
+        1000,
+        32000,
+        st.session_state.max_tokens,
+        step=1000,
+        help="Reasoning models (e.g. deepseek-v4-pro) spend part of this budget on internal 'thinking' before the JSON answer. Too low and the response comes back empty.",
+    )
     st.session_state.max_tokens = max_tokens
     
     st.divider()
@@ -559,8 +575,9 @@ elif input_mode == "GitHub PR/Branch/Commit link":
             key="fixed_output_source",
         )
         if fixed_output_type == "Paste text":
-            fixed_output_text = st.text_area(
+            st.session_state.fixed_output_text = st.text_area(
                 "Fixed output (paste)",
+                value=st.session_state.fixed_output_text,
                 height=250,
                 placeholder="Paste findings + patch + test results...",
                 key="fixed_textarea_link_mode",
@@ -734,16 +751,30 @@ elif input_mode == "Before/After Code (PR vs Branch/Commit)":
                 else:
                     st.error(label)
     
-    # Column 2: Fixed Code (Branch/Commit)
+    # Column 2: Fixed Code (PR/Branch/Commit)
     with col2:
-        st.write("**2️⃣ Fixed Code (Branch/Commit)**")
+        st.write("**2️⃣ Fixed Code (PR/Branch/Commit)**")
         fixed_link_type = st.radio(
             "Fixed source",
-            ["Branch", "Commit"],
+            ["PR", "Branch", "Commit"],
             key="before_after_fixed_type",
         )
         
-        if fixed_link_type == "Branch":
+        if fixed_link_type == "PR":
+            fixed_pr_link = st.text_input(
+                "PR URL",
+                placeholder="https://github.com/owner/repo/pull/123",
+                key="before_after_fixed_pr_link",
+            )
+            if fixed_pr_link and st.button("📥 Fetch Fixed PR", key="before_after_fetch_fixed_pr"):
+                code, label = fetch_pr_diff(fixed_pr_link)
+                if code:
+                    st.session_state.fixed_output_text = code
+                    st.success(f"✅ {label}")
+                else:
+                    st.error(label)
+        
+        elif fixed_link_type == "Branch":
             fixed_branch_url = st.text_input(
                 "Repo URL or Branch URL",
                 placeholder="https://github.com/owner/repo",

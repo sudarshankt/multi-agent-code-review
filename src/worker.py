@@ -10,11 +10,16 @@ from arq.worker import Worker
 from src.infrastructure.redis.queue import get_redis_settings
 
 
+async def noop_job(ctx):
+    return None
+
+
 class WorkerSettings:
     # Class attribute (not @staticmethod) — spec bug #1
     redis_settings = get_redis_settings()
     max_jobs = 5
     job_timeout = 600  # 10 minutes
+    functions = [noop_job]
 
 
 async def startup(ctx):

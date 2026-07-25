@@ -118,6 +118,29 @@ class TestSecurityAgent:
         assert findings == []
 
     @pytest.mark.asyncio
+    async def test_analyze_skips_safe_resolved_path_access(self) -> None:
+        """Resolved file access should bypass the LLM and stay clean."""
+        fake_llm = FakeLLMService([])
+        retriever = SecurityRetriever(top_k=3)
+        retriever._query_chromadb = lambda _q: ["CWE-22 Path Traversal guidance"]
+        agent = SecurityAgent(llm=fake_llm, retriever=retriever)
+
+        code = (
+            'from pathlib import Path\n\n'
+            'def read_config(path: str) -> dict:\n'
+            '    resolved = Path(path).resolve()\n'
+            '    if not resolved.exists():\n'
+            '        return {}\n'
+            '    with open(resolved, "r") as f:\n'
+            '        return {}\n'
+        )
+
+        findings = await agent.analyze(code, "clean.py")
+
+        assert findings == []
+        assert fake_llm.complete_calls == []
+
+    @pytest.mark.asyncio
     async def test_analyze_handles_malformed_llm_output(self) -> None:
         """When the LLM returns non-JSON text, findings are empty (graceful)."""
         fake_llm = FakeLLMService("this is not json at all, just prose")
@@ -128,6 +151,32 @@ class TestSecurityAgent:
         findings = await agent.analyze("some code", "file.py")
 
         assert findings == []
+
+    @pytest.mark.asyncio
+    async def test_analyze_uses_deterministic_fallback_when_llm_empty(self) -> None:
+        """High-signal vulnerabilities still produce findings when LLM returns []."""
+        fake_llm = FakeLLMService([])
+        retriever = SecurityRetriever(top_k=3)
+        retriever._query_chromadb = lambda _q: []
+        agent = SecurityAgent(llm=fake_llm, retriever=retriever)
+
+        code = (
+            'STRIPE_API_KEY = "sk_live_1234567890abcdef"\n'
+            'import pickle\n'
+            'import hashlib\n'
+            'def run(user_input):\n'
+            '    os.system(f"ping -c 1 {user_input}")\n'
+            '    return pickle.loads(user_input)\n'
+            'def hash_password(password):\n'
+            '    return hashlib.md5(password.encode()).hexdigest()\n'
+        )
+
+        findings = await agent.analyze(code, "vuln.py")
+
+        assert len(findings) >= 3
+        assert any(f.cwe_id == "CWE-798" for f in findings)
+        assert any(f.cwe_id == "CWE-78" for f in findings)
+        assert any(f.cwe_id == "CWE-502" for f in findings)
 
     # ── findings metadata ─────────────────────────────────────────────────
 
@@ -333,6 +382,31 @@ class TestFakeLLMService:
         fake = FakeLLMService("sorry, I can't do that")
         result = await fake.complete_json("prompt")
         assert result == []
+
+    def test_extract_json_recovers_truncated_object(self) -> None:
+        """A truncated JSON array still yields a recoverable partial finding."""
+        from src.services.llm_service import _extract_json
+
+        truncated = (
+            '[\n'
+            '  {\n'
+            '    "title": "Hardcoded Stripe API Key",\n'
+            '    "description": "Key is hardcoded in source.",\n'
+            '    "severity": "high",\n'
+            '    "confidence": "high",\n'
+            '    "start_line": 9,\n'
+            '    "end_line": 9,\n'
+            '    "suggestion": "Move key to env vars.",\n'
+            '    "cwe_id": "CWE-798",\n'
+            '    "references'
+        )
+
+        result = _extract_json(truncated)
+
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0]["title"] == "Hardcoded Stripe API Key"
+        assert result[0]["severity"] == "high"
 
     @pytest.mark.asyncio
     async def test_complete_records_prompt(self) -> None:

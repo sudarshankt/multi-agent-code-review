@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eval-pr"
+version = "1.0.0"
+description = "Single real-PR audit tool for a multi-agent code-review system: independent LLM judge, deterministic GO/NO-GO verdict."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=0.25.0",
+]
+
+[project.optional-dependencies]
+gui = ["streamlit>=1.30.0"]
+
+[project.scripts]
+eval-pr = "eval_pr.run_single_pr:main"
+
+[tool.setuptools.packages.find]
+include = ["eval_pr*"]

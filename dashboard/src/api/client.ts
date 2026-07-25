@@ -15,6 +15,11 @@ export interface Review {
   created_at: string
   updated_at: string
   completed_at?: string
+  fix_commits?: Record<string, string>
+  fix_severity_levels?: string[]
+  analysis_duration_seconds?: number
+  total_duration_seconds?: number
+  tokens_used?: number
 }
 
 export interface Finding {
@@ -39,7 +44,11 @@ export interface Finding {
 
 export interface ReviewDetail extends Review {
   findings_by_category: Record<string, Finding[]>
+  pr_url?: string
+  pr_head_branch?: string
+  fix_branch?: string
   fix_pr_url?: string
+  fix_commit_url?: string
   proposed_fixes?: ProposedFix[]
   test_run?: TestRunSummary
 }
@@ -81,7 +90,7 @@ export const reviewAPI = {
   listReviews: (page = 1, pageSize = 10) =>
     api.get<{ items: Review[]; total: number; page: number; page_size: number }>(
       '/reviews',
-      { params: { page, page_size } }
+      { params: { page, page_size: pageSize } }
     ),
 }
 
@@ -92,9 +101,10 @@ export const fixesAPI = {
   reviewFix: (reviewId: string, fixId: string, action: 'approve' | 'reject') =>
     api.patch<{ fix_id: string; status: string }>(`/reviews/${reviewId}/fixes/${fixId}`, { action }),
 
-  applyApprovedFixes: (reviewId: string) =>
+  applyApprovedFixes: (reviewId: string, severityLevels?: string[]) =>
     api.post<{ committed: number; failed: number; commit_shas: Record<string, string> }>(
-      `/reviews/${reviewId}/fixes/apply`
+      `/reviews/${reviewId}/fixes/apply`,
+      { severity_levels: severityLevels ?? ['critical', 'high', 'medium'] }
     ),
 
   runTests: (reviewId: string, fixIds?: string[]) =>

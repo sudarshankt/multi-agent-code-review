@@ -47,6 +47,8 @@ def _parse_pr_url(url: str) -> tuple[str, str, int] | None:
 
 async def _run_review(review_id: str) -> None:
     """Background task: run the review pipeline (orchestrator)."""
+    from datetime import datetime, timezone
+    
     review = _reviews.get(review_id)
     if not review:
         return
@@ -56,6 +58,7 @@ async def _run_review(review_id: str) -> None:
         from src.api.endpoints.sse import publish_event
 
         review.status = ReviewStatus.ANALYZING
+        review.analysis_started = datetime.now(timezone.utc)
         await publish_event(review_id, "status_update", {"status": review.status.value})
 
         # Fetch PR data if not already done.
@@ -96,6 +99,9 @@ async def _run_review(review_id: str) -> None:
         agent_results = result.get("agent_results", {})
         proposed_fixes = result.get("proposed_fixes", [])
 
+        # Store files for later use (fix generation)
+        review.files = files
+
         # Populate agent_results grouped by category (bug #7).
         for agent_name, agent_result_dict in agent_results.items():
             if isinstance(agent_result_dict, dict):
@@ -107,6 +113,8 @@ async def _run_review(review_id: str) -> None:
         review.total_fixes = 0   # No commits yet — user must approve proposals
         review.proposed_fixes = proposed_fixes
         review.status = ReviewStatus.COMPLETED
+        review.analysis_completed = datetime.now(timezone.utc)
+        review.completed_at = datetime.now(timezone.utc)
 
         await publish_event(review_id, "status_update", {"status": review.status.value})
         logger.info(
@@ -279,10 +287,20 @@ async def get_review(review_id: str) -> ReviewDetailResponse:
         pr_number=review.pr_info.pr_number,
         pr_title=review.pr_info.title,
         pr_author=review.pr_info.author,
+        pr_url=review.pr_info.html_url,
+        pr_head_branch=review.pr_info.head_branch,
         findings_by_category=by_category,
+        proposed_fixes=review.proposed_fixes,
         total_findings=review.total_findings,
         total_fixes=review.total_fixes,
+        fix_branch=review.fix_branch,
         fix_pr_url=review.fix_pr_url,
+        fix_commit_url=review.fix_pr_url if review.fix_pr_url and "/commit/" in review.fix_pr_url else None,
+        fix_commits=review.fix_commits,
+        fix_severity_levels=review.fix_severity_levels,
+        analysis_duration_seconds=review.analysis_duration_seconds,
+        total_duration_seconds=review.total_duration_seconds,
+        tokens_used=review.tokens_used,
         created_at=review.created_at,
         updated_at=review.updated_at,
         completed_at=review.completed_at,

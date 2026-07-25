@@ -38,6 +38,10 @@ _configure_ssl_env(get_settings().llm.ssl_cert_file)
 
 
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
+_PAIR_RE = re.compile(
+    r'"([A-Za-z_][A-Za-z0-9_]*)"\s*:\s*("(?:\\.|[^"\\])*"|null|true|false|-?\d+(?:\.\d+)?)',
+    re.DOTALL,
+)
 
 
 def _find_balanced(text: str, open_ch: str, close_ch: str) -> str | None:
@@ -66,6 +70,49 @@ def _find_balanced(text: str, open_ch: str, close_ch: str) -> str | None:
             depth -= 1
             if depth == 0:
                 return text[start : i + 1]
+    return None
+
+
+def _extract_balanced_objects(text: str) -> list[dict[str, Any]]:
+    """Extract any complete JSON objects found in order within `text`."""
+    objects: list[dict[str, Any]] = []
+    cursor = 0
+    while True:
+        start = text.find("{", cursor)
+        if start == -1:
+            break
+        candidate = _find_balanced(text[start:], "{", "}")
+        if not candidate:
+            break
+        try:
+            parsed = json.loads(candidate)
+        except (json.JSONDecodeError, ValueError):
+            cursor = start + len(candidate)
+            continue
+        if isinstance(parsed, dict):
+            objects.append(parsed)
+        cursor = start + len(candidate)
+    return objects
+
+
+def _salvage_partial_object(text: str) -> dict[str, Any] | None:
+    """Recover well-formed key/value pairs from a truncated JSON object."""
+    start = text.find("{")
+    if start == -1:
+        return None
+
+    fragment = text[start:]
+    recovered: dict[str, Any] = {}
+    for key, raw_value in _PAIR_RE.findall(fragment):
+        if key in recovered:
+            continue
+        try:
+            recovered[key] = json.loads(raw_value)
+        except (json.JSONDecodeError, ValueError):
+            continue
+
+    if any(k in recovered for k in ("title", "description", "issue", "message")):
+        return recovered
     return None
 
 
@@ -107,6 +154,24 @@ def _extract_json(text: str) -> Any:
             continue
         if isinstance(parsed, (list, dict)):
             return parsed
+
+    recovered_objects = _extract_balanced_objects(text)
+    if recovered_objects:
+        logger.warning(
+            "llm_json_partial_recovered",
+            recovered_count=len(recovered_objects),
+            mode="balanced_objects",
+        )
+        return recovered_objects
+
+    recovered_object = _salvage_partial_object(text)
+    if recovered_object:
+        logger.warning(
+            "llm_json_partial_recovered",
+            recovered_count=1,
+            mode="field_salvage",
+        )
+        return [recovered_object]
 
     logger.warning(
         "llm_json_parse_failed",

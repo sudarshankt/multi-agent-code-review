@@ -35,7 +35,7 @@ class GitService:
             "X-GitHub-Api-Version": API_VERSION,
         }
         if gh.token:
-            headers["Authorization"] = f"Bearer {gh.token}"
+            headers["Authorization"] = f"token {gh.token}"
         self._client = httpx.AsyncClient(
             base_url=gh.base_url,
             headers=headers,
@@ -78,7 +78,7 @@ class GitService:
         base = f"/repos/{owner}/{repo}/git"
 
         # 1. HEAD sha of the branch
-        ref = await self._request("GET", f"{base}/ref/heads/{branch}")
+        ref = await self._request("GET", f"{base}/refs/heads/{branch}")
         head_sha = ref["object"]["sha"]
 
         # 2. base tree sha
@@ -138,3 +138,42 @@ class GitService:
             commit_sha=new_sha,
         )
         return new_sha
+
+    async def create_ref(
+        self,
+        owner: str,
+        repo: str,
+        branch: str,
+        from_sha: str = "HEAD",
+    ) -> str:
+        """Create a new branch from a given sha. Returns the sha."""
+        base = f"/repos/{owner}/{repo}/git"
+
+        # Resolve HEAD to sha if needed
+        if from_sha == "HEAD":
+            try:
+                ref = await self._request("GET", f"{base}/refs/heads/main")
+                from_sha = ref["object"]["sha"]
+            except Exception:
+                # Try master if main doesn't exist
+                ref = await self._request("GET", f"{base}/refs/heads/master")
+                from_sha = ref["object"]["sha"]
+
+        # Create the ref
+        result = await self._request(
+            "POST",
+            f"{base}/refs",
+            json={
+                "ref": f"refs/heads/{branch}",
+                "sha": from_sha,
+            },
+        )
+        
+        logger.info(
+            "branch_created",
+            owner=owner,
+            repo=repo,
+            branch=branch,
+            from_sha=from_sha,
+        )
+        return result["object"]["sha"]

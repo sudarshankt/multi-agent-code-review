@@ -119,6 +119,7 @@ class GitHubService:
             head_branch=(pr.get("head") or {}).get("ref"),
             base_branch=(pr.get("base") or {}).get("ref"),
             head_sha=(pr.get("head") or {}).get("sha"),
+            base_sha=(pr.get("base") or {}).get("sha"),
             html_url=pr.get("html_url"),
         )
 

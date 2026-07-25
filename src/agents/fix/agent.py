@@ -103,6 +103,8 @@ class FixAgent:
 
             if fix_result.success and fixed_code and fixed_code != code:
                 diff = self._make_diff(code, fixed_code, file_path)
+                # Get the highest severity from findings for this fix
+                max_severity = max((f.severity.value for f in file_findings), default="medium")
                 proposal = ProposedFix(
                     review_id=review_id,
                     category=category,
@@ -112,6 +114,7 @@ class FixAgent:
                     fixed_code=fixed_code,
                     diff=diff,
                     explanation=fix_result.commit_message or "",
+                    severity=max_severity,
                 )
                 proposals.append(proposal)
                 # Pass fixed code to the next category as the current state

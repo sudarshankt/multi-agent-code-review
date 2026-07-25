@@ -2,7 +2,7 @@
 PY := .venv/bin/python
 PIP := .venv/bin/pip
 
-.PHONY: venv install install-rag up down run run-all run-backend run-frontend run-debug run-sep worker test lint fmt ingest clean
+.PHONY: venv install install-rag up down run run-all run-backend run-frontend run-debug run-sep run-demo run-demo-backend worker test lint fmt ingest clean
 
 venv:
 	python3.14 -m venv .venv
@@ -50,6 +50,12 @@ run-sep:
 	@echo ""
 	@echo "Terminal 2 (Frontend):"
 	@echo "  cd dashboard && npm run dev"
+
+run-demo:
+	./run-demo.sh
+
+run-demo-backend:
+	./run-demo.sh --backend-only
 
 worker:
 	.venv/bin/arq src.worker.WorkerSettings

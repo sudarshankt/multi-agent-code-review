@@ -1,0 +1,129 @@
+{
+  "pr_url": "https://github.com/Agentic-Code-Reviewers/multi-agent-code-review/pull/14",
+  "status": "completed",
+  "timestamp": "2026-07-23T15:56:00Z",
+  "findings": {
+    "security": [
+      {
+        "id": "sec_001",
+        "issue": "SQL Injection Vulnerability",
+        "severity": "CRITICAL",
+        "file": "test_vulnerable_app.py",
+        "line": 17,
+        "function": "get_user_from_db",
+        "description": "User input directly concatenated into SQL query using f-string. This allows attackers to inject arbitrary SQL commands.",
+        "code_snippet": "query = f\"SELECT * FROM users WHERE id = '{user_id}'\"",
+        "recommendation": "Use parameterized queries with placeholders"
+      },
+      {
+        "id": "sec_002",
+        "issue": "Unsafe Pickle Deserialization",
+        "severity": "CRITICAL",
+        "file": "test_vulnerable_app.py",
+        "line": 27,
+        "function": "load_user_data",
+        "description": "pickle.loads() can execute arbitrary code. Using pickle on untrusted data is dangerous.",
+        "recommendation": "Use json.loads() or another safe serialization format"
+      },
+      {
+        "id": "sec_003",
+        "issue": "Hardcoded Secrets",
+        "severity": "HIGH",
+        "file": "test_vulnerable_app.py",
+        "line": 37,
+        "description": "API keys and secrets hardcoded in source code",
+        "recommendation": "Move secrets to environment variables"
+      }
+    ],
+    "bug": [
+      {
+        "id": "bug_001",
+        "issue": "Undefined Variable Reference",
+        "severity": "HIGH",
+        "file": "test_vulnerable_app.py",
+        "line": 52,
+        "function": "calculate_total_price",
+        "description": "Variable 'price' used but never defined. Should be item['price']",
+        "code_snippet": "total += price * quantity",
+        "recommendation": "Change to: total += item['price'] * quantity"
+      },
+      {
+        "id": "bug_002",
+        "issue": "Off-by-One Error",
+        "severity": "MEDIUM",
+        "file": "test_vulnerable_app.py",
+        "line": 62,
+        "function": "process_data",
+        "description": "range(len(data) + 1) will cause IndexError",
+        "recommendation": "Change to: range(len(data))"
+      },
+      {
+        "id": "bug_003",
+        "issue": "Division by Zero",
+        "severity": "HIGH",
+        "file": "test_vulnerable_app.py",
+        "line": 71,
+        "function": "divide_numbers",
+        "description": "No check for b == 0 before division",
+        "recommendation": "Add guard: if b == 0: raise ValueError('Division by zero')"
+      }
+    ],
+    "style": [
+      {
+        "id": "style_001",
+        "issue": "Poor Function Naming",
+        "severity": "LOW",
+        "file": "test_vulnerable_app.py",
+        "line": 77,
+        "function": "x",
+        "description": "Single-letter function name 'x' is not descriptive",
+        "recommendation": "Rename to something meaningful like 'calculate_sum'"
+      },
+      {
+        "id": "style_002",
+        "issue": "Inconsistent Naming Convention",
+        "severity": "LOW",
+        "file": "test_vulnerable_app.py",
+        "line": 83,
+        "description": "Function name doesn't follow snake_case convention",
+        "recommendation": "Rename to lowercase_with_underscores"
+      },
+      {
+        "id": "style_003",
+        "issue": "Missing Docstring",
+        "severity": "LOW",
+        "file": "test_vulnerable_app.py",
+        "line": 90,
+        "function": "MyClass",
+        "description": "Class lacks documentation",
+        "recommendation": "Add docstring explaining class purpose"
+      }
+    ],
+    "performance": [
+      {
+        "id": "perf_001",
+        "issue": "Inefficient Algorithm - O(n²) Complexity",
+        "severity": "MEDIUM",
+        "file": "test_vulnerable_app.py",
+        "line": 109,
+        "function": "inefficient_search",
+        "description": "Nested loop search is quadratic. Should use set or hash table for O(n) complexity.",
+        "code_snippet": "for i in range(len(items)):\n    for j in range(len(items)): ...",
+        "recommendation": "Use set membership: 'if item in set(items)' for O(1) lookup"
+      }
+    ]
+  },
+  "proposed_patch": {
+    "status": "generated",
+    "changes": 6,
+    "files_affected": ["test_vulnerable_app.py"],
+    "summary": "Fixed SQL injection, undefined variable, and inefficient algorithm"
+  },
+  "test_results": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "coverage": 85
+  },
+  "summary": "All 4 agent categories identified issues. Found 3 security vulnerabilities, 3 bugs, 3 style issues, and 1 performance issue."
+}

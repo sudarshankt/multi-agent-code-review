@@ -2,13 +2,74 @@
 
 ## Prerequisites
 
-- ✅ Python 3.14+ installed
+- ✅ Python 3.12+ installed
 - ✅ Node.js 18+ installed  
 - ✅ Docker installed
 - ✅ Anthropic API key (get at https://console.anthropic.com)
 - ✅ GitHub personal access token (PAT)
 
+## 🚀 **RECOMMENDED: Comprehensive Initialization (Includes ALL Health Checks)**
+
+For a complete, verified setup with full health checks, LLM verification, and environment validation:
+
+```bash
+./init-setup.sh
+```
+
+This script performs **14 phases** of initialization:
+1. ✅ Prerequisite verification (Python, Docker, Node.js)
+2. ✅ Python virtual environment setup
+3. ✅ Core + RAG dependency installation
+4. ✅ Environment configuration and validation
+5. ✅ Dashboard dependencies
+6. ✅ Docker services startup (Redis, ChromaDB)
+7. ✅ OWASP knowledge base ingestion
+8. ✅ Backend API startup
+9. ✅ Backend API health checks
+10. ✅ LLM service verification
+11. ✅ GitHub service verification
+12. ✅ Infrastructure verification (Redis, ChromaDB)
+13. ✅ Agent verification
+14. ✅ Frontend services startup
+
+**What's verified:**
+- All environment variables configured
+- LLM API connectivity
+- GitHub integration readiness
+- Redis and ChromaDB accessibility
+- OWASP knowledge base loaded
+- All agents available
+- Full system health
+
 ## ⚡ Quick: Run Everything Together
+
+### Full Demo Stack (API + Worker + Dashboard + Streamlit)
+Use this when you want the entire local demo environment in one terminal:
+
+```bash
+make run-demo
+```
+
+This command launches:
+- Redis (`:6379`)
+- ChromaDB (`:8001`)
+- FastAPI backend (`:8000`)
+- ARQ worker
+- Dashboard (`:5173`)
+- eval_PR Streamlit app (`:8501`)
+
+Stop all local processes with `Ctrl+C`. Docker services remain running; stop them with:
+
+```bash
+make down
+```
+
+### Backend-Only Demo (API + Worker + Infra)
+Use this mode when you only need backend services (no dashboard/streamlit):
+
+```bash
+make run-demo-backend
+```
 
 ### Prerequisites (One Time)
 ```bash

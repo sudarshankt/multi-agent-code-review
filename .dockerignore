@@ -54,5 +54,3 @@ docker-compose*.yml
 .chroma/
 chroma-data/
 redis-data/
-eval_PR_results/
-eval/results/

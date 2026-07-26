@@ -33,17 +33,11 @@ dependencies = [
     "pytest-asyncio>=0.23",
     "ruff>=0.5",
     "respx>=0.21",
-    "honcho>=1.1"
+    "honcho>=1.1",
+    "onnxruntime>=1.18",
+    "tokenizers>=0.19"
 ]
 
-[project.optional-dependencies]
-rag = [
-    "sentence-transformers>=3.0",
-]
-eval = [
-    "onnxruntime>=1.18",
-    "tokenizers>=0.19",
-]
 observability = [
     "langfuse>=2.0",
 ]

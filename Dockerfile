@@ -27,12 +27,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml README.md ./
 COPY src/ src/
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir ".[rag]"
+    && pip install --no-cache-dir .
 
 # Remaining backend assets
 COPY scripts/ scripts/
 COPY knowledge_base/ knowledge_base/
-COPY all-MiniLM-L6-v2-main/ all-MiniLM-L6-v2-main/
 
 # Deploy configs (nginx + supervisor)
 COPY deploy/ deploy/

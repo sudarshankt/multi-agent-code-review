@@ -59,8 +59,6 @@ def _load_eval_options() -> dict[str, list[str]]:
         models = [item["label"] for item in raw]
     return {"agents": list(ANALYSIS_AGENTS), "fix": models}
 
-_RUN_TIMEOUT_SECS = 600
-
 # In-memory status per eval type. A single process instance is assumed
 # (mirrors the in-memory review store used elsewhere in this API).
 _run_status: dict[EvalType, dict] = {
@@ -97,7 +95,7 @@ async def _run_eval_subprocess(eval_type: EvalType, filter_values: list[str]) ->
             stderr=asyncio.subprocess.PIPE,
             cwd=_REPO_ROOT,
         )
-        stdout_b, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=_RUN_TIMEOUT_SECS)
+        stdout_b, stderr_b = await proc.communicate()
         combined = (stdout_b + stderr_b).decode(errors="replace")
         state["log_tail"] = combined[-4000:]
 
@@ -108,10 +106,6 @@ async def _run_eval_subprocess(eval_type: EvalType, filter_values: list[str]) ->
             state["status"] = "failed"
             state["error"] = f"exit code {proc.returncode}"
             logger.warning("eval_run_failed", eval_type=eval_type, returncode=proc.returncode)
-    except asyncio.TimeoutError:
-        state["status"] = "failed"
-        state["error"] = f"timed out after {_RUN_TIMEOUT_SECS}s"
-        logger.warning("eval_run_timeout", eval_type=eval_type)
     except Exception as exc:  # noqa: BLE001 - surface any launch failure to the UI
         state["status"] = "failed"
         state["error"] = str(exc)

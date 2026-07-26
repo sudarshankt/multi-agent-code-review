@@ -29,7 +29,6 @@ run:
 
 run-all:
 	@echo "Starting Redis and ChromaDB (background)..."
-	@docker compose up -d redis 2>/dev/null || true
 	@sleep 2
 	@echo ""
 	@echo "Starting Backend + Frontend with honcho..."

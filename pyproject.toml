@@ -32,6 +32,10 @@ rag = [
     "chromadb>=0.5",
     "sentence-transformers>=3.0",
 ]
+eval = [
+    "onnxruntime>=1.18",
+    "tokenizers>=0.19",
+]
 observability = [
     "langfuse>=2.0",
 ]

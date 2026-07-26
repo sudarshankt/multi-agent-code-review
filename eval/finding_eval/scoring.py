@@ -10,7 +10,10 @@ correctly identifying the underlying issue.
 from __future__ import annotations
 
 import difflib
+import os
 from functools import lru_cache
+
+import numpy as np
 
 from src.core.config import get_settings
 from src.core.logging import get_logger
@@ -23,36 +26,59 @@ logger = get_logger(__name__)
 
 DEFAULT_LINE_TOLERANCE = 2
 
-_model = None
+_tokenizer = None
+_session = None
 _model_load_attempted = False
 
 
 def _get_model():
-    """Lazily load the local sentence-embedding model (no network call)."""
-    global _model, _model_load_attempted
+    """Lazily load the local ONNX embedding model (no network call, no torch)."""
+    global _tokenizer, _session, _model_load_attempted
     if _model_load_attempted:
-        return _model
+        return _tokenizer, _session
     _model_load_attempted = True
     try:
-        from sentence_transformers import SentenceTransformer
+        import onnxruntime as ort
+        from tokenizers import Tokenizer
 
-        _model = SentenceTransformer(get_settings().chromadb.embedding_model_path)
+        model_dir = get_settings().eval_embedding_model_path
+        _tokenizer = Tokenizer.from_file(os.path.join(model_dir, "tokenizer.json"))
+        _tokenizer.enable_padding()
+        _tokenizer.enable_truncation(max_length=256)
+        _session = ort.InferenceSession(
+            os.path.join(model_dir, "model.onnx"), providers=["CPUExecutionProvider"]
+        )
     except ImportError:
         logger.warning(
-            "sentence_transformers_not_installed",
-            hint="Install with: pip install -e '.[rag]'; falling back to difflib similarity",
+            "onnx_embedding_deps_not_installed",
+            hint="Install with: pip install -e '.[eval]'; falling back to difflib similarity",
         )
     except Exception as exc:
         logger.error("embedding_model_load_failed", error=str(exc))
-    return _model
+    return _tokenizer, _session
 
 
 @lru_cache(maxsize=None)
 def _embed(text: str):
-    model = _get_model()
-    if model is None:
+    tokenizer, session = _get_model()
+    if session is None:
         return None
-    return model.encode(text, normalize_embeddings=True, show_progress_bar=False)
+    encoding = tokenizer.encode(text)
+    input_ids = np.array([encoding.ids], dtype=np.int64)
+    attention_mask = np.array([encoding.attention_mask], dtype=np.int64)
+    token_type_ids = np.zeros_like(input_ids)
+    outputs = session.run(
+        None,
+        {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "token_type_ids": token_type_ids,
+        },
+    )
+    token_embeddings = outputs[0][0]  # (seq, hidden)
+    mask = attention_mask[0][:, None].astype(np.float32)
+    mean_pooled = (token_embeddings * mask).sum(axis=0) / np.clip(mask.sum(), 1e-9, None)
+    return mean_pooled / np.linalg.norm(mean_pooled)
 
 
 def _text_similarity(a: str, b: str) -> float:

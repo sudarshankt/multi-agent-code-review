@@ -83,6 +83,7 @@ class Settings(BaseSettings):
     chromadb_persist_dir: str = ".chroma"
     chromadb_collection: str = "owasp_knowledge"
     chromadb_embedding_model_path: str = "./all-MiniLM-L6-v2-main"
+    eval_embedding_model_path: str = "./eval/all-MiniLM-L6-v2-onnx"
 
     # ---- langfuse ----
     langfuse_enabled: bool = False

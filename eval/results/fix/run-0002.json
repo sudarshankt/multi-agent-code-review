@@ -1,0 +1,120 @@
+{
+  "generated_at": "2026-07-25T07:39:31.085892Z",
+  "models": [
+    {
+      "model_label": "nav",
+      "cases": 6,
+      "success_rate": 1.0,
+      "syntax_valid_rate": 1.0,
+      "resolved_rate": 1.0,
+      "avg_correctness": 4.833,
+      "avg_safety": 4.833,
+      "avg_minimality": 5.0,
+      "avg_explanation_quality": 4.167,
+      "case_results": [
+        {
+          "model_label": "nav",
+          "file": "tests/test_data/app_vunerable.py",
+          "category": "security",
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 5.0,
+            "safety": 5.0,
+            "minimality": 5.0,
+            "explanation_quality": 4.0,
+            "regression_risk": "low",
+            "notes": "All vulnerabilities were correctly addressed with minimal changes and no new issues introduced."
+          }
+        },
+        {
+          "model_label": "nav",
+          "file": "tests/test_data/profile.py",
+          "category": "security",
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 4.0,
+            "safety": 4.0,
+            "minimality": 5.0,
+            "explanation_quality": 4.0,
+            "regression_risk": "low",
+            "notes": "The fix correctly addresses SSRF by blocking private IPs, with minimal changes and a clear explanation."
+          }
+        },
+        {
+          "model_label": "nav",
+          "file": "tests/test_data/app_vunerable-v1.py",
+          "category": "security",
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 5.0,
+            "safety": 5.0,
+            "minimality": 5.0,
+            "explanation_quality": 3.0,
+            "regression_risk": "low",
+            "notes": "All security issues were addressed correctly without introducing new problems."
+          }
+        },
+        {
+          "model_label": "nav",
+          "file": "eval/golden/samples/bug_sample.py",
+          "category": "bug_detection",
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 5.0,
+            "safety": 5.0,
+            "minimality": 5.0,
+            "explanation_quality": 5.0,
+            "regression_risk": "none",
+            "notes": "All bugs were correctly fixed with minimal changes and clear explanations."
+          }
+        },
+        {
+          "model_label": "nav",
+          "file": "eval/golden/samples/performance_sample.py",
+          "category": "performance",
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 5.0,
+            "safety": 5.0,
+            "minimality": 5.0,
+            "explanation_quality": 4.0,
+            "regression_risk": "low",
+            "notes": "All performance issues were correctly resolved with minimal changes and no new issues introduced."
+          }
+        },
+        {
+          "model_label": "nav",
+          "file": "eval/golden/samples/style_sample.py",
+          "category": "style",
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 5.0,
+            "safety": 5.0,
+            "minimality": 5.0,
+            "explanation_quality": 5.0,
+            "regression_risk": "none",
+            "notes": "All style issues were correctly resolved without introducing new problems."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -364,7 +364,8 @@ class FixAgent:
             return result, None
 
         result.fixed_code = fixed_code
-        result.commit_message = payload.get("explanation", "")
+        result.explanation = payload.get("explanation", "")
+        result.commit_message = result.explanation
         result.success = True
         return result, fixed_code
 

@@ -1,0 +1,72 @@
+{
+  "generated_at": "2026-07-25T09:51:05.402203Z",
+  "models": [
+    {
+      "model_label": "nav",
+      "cases": 6,
+      "success_rate": 0.0,
+      "syntax_valid_rate": 0.0,
+      "resolved_rate": 0.0,
+      "avg_correctness": 0.0,
+      "avg_safety": 0.0,
+      "avg_minimality": 0.0,
+      "avg_explanation_quality": 0.0,
+      "case_results": [
+        {
+          "model_label": "nav",
+          "file": "tests/test_data/app_vunerable.py",
+          "category": "security",
+          "success": false,
+          "syntax_valid": null,
+          "error": "NAV LLM gateway call failed: Server error '500 INTERNAL SERVER ERROR' for url 'https://azureservice.aiml.test.navbackoffice.com/api/v1/chat/azure'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
+          "judge": null
+        },
+        {
+          "model_label": "nav",
+          "file": "tests/test_data/profile.py",
+          "category": "security",
+          "success": false,
+          "syntax_valid": null,
+          "error": "NAV LLM gateway call failed: Server error '500 INTERNAL SERVER ERROR' for url 'https://azureservice.aiml.test.navbackoffice.com/api/v1/chat/azure'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
+          "judge": null
+        },
+        {
+          "model_label": "nav",
+          "file": "tests/test_data/app_vunerable-v1.py",
+          "category": "security",
+          "success": false,
+          "syntax_valid": null,
+          "error": "NAV LLM gateway call failed: Server error '500 INTERNAL SERVER ERROR' for url 'https://azureservice.aiml.test.navbackoffice.com/api/v1/chat/azure'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
+          "judge": null
+        },
+        {
+          "model_label": "nav",
+          "file": "eval/golden/samples/bug_sample.py",
+          "category": "bug_detection",
+          "success": false,
+          "syntax_valid": null,
+          "error": "NAV LLM gateway call failed: Server error '500 INTERNAL SERVER ERROR' for url 'https://azureservice.aiml.test.navbackoffice.com/api/v1/chat/azure'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
+          "judge": null
+        },
+        {
+          "model_label": "nav",
+          "file": "eval/golden/samples/performance_sample.py",
+          "category": "performance",
+          "success": false,
+          "syntax_valid": null,
+          "error": "NAV LLM gateway call failed: Server error '500 INTERNAL SERVER ERROR' for url 'https://azureservice.aiml.test.navbackoffice.com/api/v1/chat/azure'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
+          "judge": null
+        },
+        {
+          "model_label": "nav",
+          "file": "eval/golden/samples/style_sample.py",
+          "category": "style",
+          "success": false,
+          "syntax_valid": null,
+          "error": "NAV LLM gateway call failed: Server error '500 INTERNAL SERVER ERROR' for url 'https://azureservice.aiml.test.navbackoffice.com/api/v1/chat/azure'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
+          "judge": null
+        }
+      ]
+    }
+  ]
+}

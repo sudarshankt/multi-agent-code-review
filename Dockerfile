@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Python deps + package install (README.md needed by hatchling metadata)
@@ -35,6 +36,9 @@ COPY all-MiniLM-L6-v2-main/ all-MiniLM-L6-v2-main/
 
 # Deploy configs (nginx + supervisor)
 COPY deploy/ deploy/
+
+# Eval
+COPY eval/ eval/
 
 # Frontend static build from stage 1
 COPY --from=frontend-build /build/dist /app/static

@@ -8,9 +8,6 @@ services:
       - APP_ENV=production
     env_file:
       - .env
-    depends_on:
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/health"]
       interval: 10s

@@ -219,3 +219,5 @@ __marimo__/
 
 # Local ChromaDB persistence
 .chroma/
+
+run-*.json

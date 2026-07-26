@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from typing import Any
 
 from src.core.config import Settings, get_settings
@@ -213,6 +214,10 @@ class LLMService:
         if self.settings.llm.provider == "nav":
             return await self._complete_nav(prompt, system)
 
+        started = time.monotonic()
+        model_name = self.settings.llm.primary_model
+        prompt_chars = len(prompt)
+
         messages: list[tuple[str, str]] = []
         if system:
             messages.append(("system", system))
@@ -220,6 +225,14 @@ class LLMService:
         try:
             response = await self.model.ainvoke(messages)
         except Exception as exc:  # noqa: BLE001 - normalise to domain error
+            elapsed = time.monotonic() - started
+            logger.warning(
+                "llm_call_failed",
+                model=model_name,
+                prompt_chars=prompt_chars,
+                duration_seconds=round(elapsed, 3),
+                error=str(exc),
+            )
             raise LLMError(f"LLM completion failed: {exc}", detail=exc) from exc
 
         content = response.content
@@ -229,15 +242,36 @@ class LLMService:
                 blk.get("text", "") if isinstance(blk, dict) else str(blk)
                 for blk in content
             ]
-            return "".join(parts)
-        return str(content)
+            text = "".join(parts)
+        else:
+            text = str(content)
+
+        elapsed = time.monotonic() - started
+        logger.info(
+            "llm_call_completed",
+            model=model_name,
+            prompt_chars=prompt_chars,
+            response_chars=len(text),
+            duration_seconds=round(elapsed, 3),
+        )
+        return text
 
     async def complete_json(self, prompt: str, *, system: str | None = None) -> Any:
         """Completion whose text is parsed as JSON (markdown-fence tolerant)."""
+        started = time.monotonic()
         text = await self.complete(prompt, system=system)
         if not isinstance(text, str):
             return []
-        return _extract_json(text)
+        parsed = _extract_json(text)
+        elapsed = time.monotonic() - started
+        logger.info(
+            "llm_json_parsed",
+            response_chars=len(text),
+            parsed_type=type(parsed).__name__,
+            is_empty=isinstance(parsed, list) and len(parsed) == 0,
+            total_duration_seconds=round(elapsed, 3),
+        )
+        return parsed
 
 
 _default_service: LLMService | None = None

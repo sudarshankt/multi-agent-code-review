@@ -395,6 +395,7 @@ export const EvalMatrixPage: React.FC = () => {
           {fixError || 'No fix-eval report available'}
         </div>
       ) : (
+        <>
         <div className="overflow-x-auto bg-white rounded-lg shadow">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
@@ -455,6 +456,48 @@ export const EvalMatrixPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        <div className="mt-8 space-y-6">
+          {fixReport.models.map((m) => (
+            <div key={m.model_label} className="bg-white rounded-lg shadow p-4">
+              <h2 className="font-semibold mb-3">{m.model_label} — per-case fix outcomes</h2>
+              {m.case_results.map((c, i) => (
+                <div key={`${c.file}-${i}`} className="mb-3 text-xs">
+                  <div className="font-mono text-gray-600 mb-1">
+                    {c.file} <span className="text-gray-400">({c.category})</span>
+                  </div>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    {!c.success ? (
+                      <li className="text-red-700">Fix failed{c.error ? `: ${c.error}` : ''}</li>
+                    ) : (
+                      <>
+                        {c.syntax_valid === false && <li className="text-red-700">Invalid syntax</li>}
+                        {c.judge ? (
+                          <li className={c.judge.resolved ? 'text-green-700' : 'text-red-700'}>
+                            {c.judge.resolved ? 'Resolved' : 'Not resolved'} —{' '}
+                            <span className={`px-1.5 py-0.5 rounded border text-xs font-semibold ${scoreColor(c.judge.correctness)}`}>
+                              correctness {c.judge.correctness.toFixed(2)}
+                            </span>{' '}
+                            <span className={`px-1.5 py-0.5 rounded border text-xs font-semibold ${scoreColor(c.judge.safety)}`}>
+                              safety {c.judge.safety.toFixed(2)}
+                            </span>{' '}
+                            <span className={`px-1.5 py-0.5 rounded border text-xs font-semibold ${scoreColor(c.judge.minimality)}`}>
+                              minimality {c.judge.minimality.toFixed(2)}
+                            </span>
+                            {c.judge.notes ? ` — ${c.judge.notes}` : ''}
+                          </li>
+                        ) : (
+                          <li className="text-gray-400">Fix generated, not judged</li>
+                        )}
+                      </>
+                    )}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        </>
       )}
 
       <div className="flex items-start justify-between gap-4 mb-1 mt-12 flex-wrap">

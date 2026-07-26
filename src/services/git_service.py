@@ -12,6 +12,7 @@ Commit flow (Build_from_Scratch.md section 3):
 from __future__ import annotations
 
 import base64
+import time
 from typing import Any
 
 import httpx
@@ -53,14 +54,19 @@ class GitService:
         await self.aclose()
 
     async def _request(self, method: str, url: str, **kwargs: Any) -> dict[str, Any]:
+        started = time.monotonic()
         try:
             resp = await self._client.request(method, url, **kwargs)
         except httpx.HTTPError as exc:
+            elapsed = time.monotonic() - started
+            logger.warning("git_api_request_failed", method=method, url=url, duration_seconds=round(elapsed, 3), error=str(exc))
             raise GitOperationError(f"Git request failed: {exc}", detail=exc) from exc
         if resp.status_code >= 400:
             raise GitOperationError(
                 f"Git API {resp.status_code} for {method} {url}", detail=resp.text
             )
+        elapsed = time.monotonic() - started
+        logger.info("git_api_request", method=method, url=url, status=resp.status_code, duration_seconds=round(elapsed, 3))
         return resp.json()
 
     async def commit_fixes(

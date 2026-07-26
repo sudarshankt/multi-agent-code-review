@@ -7,6 +7,7 @@ trust store by default; set GITHUB_CA_BUNDLE for an enterprise CA.
 from __future__ import annotations
 
 import base64
+import time
 from typing import Any
 
 import httpx
@@ -53,10 +54,13 @@ class GitHubService:
         await self.aclose()
 
     async def _get(self, url: str, *, accept: str | None = None) -> httpx.Response:
+        started = time.monotonic()
         headers = {"Accept": accept} if accept else None
         try:
             resp = await self._client.get(url, headers=headers)
         except httpx.HTTPError as exc:
+            elapsed = time.monotonic() - started
+            logger.warning("github_api_get_failed", url=url, duration_seconds=round(elapsed, 3), error=str(exc))
             raise GitHubAPIError(f"GitHub request failed: {exc}", detail=exc) from exc
         if resp.status_code == 403 and "rate limit" in resp.text.lower():
             raise GitHubRateLimitError("GitHub rate limit exceeded", detail=resp.text)
@@ -64,7 +68,51 @@ class GitHubService:
             raise GitHubAPIError(
                 f"GitHub API {resp.status_code} for {url}", detail=resp.text
             )
+        elapsed = time.monotonic() - started
+        logger.info("github_api_get", url=url, status=resp.status_code, duration_seconds=round(elapsed, 3))
         return resp
+
+    async def _request_json(self, method: str, url: str, *, json: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Make an HTTP request and return parsed JSON (for write operations)."""
+        started = time.monotonic()
+        try:
+            resp = await self._client.request(method, url, json=json)
+        except httpx.HTTPError as exc:
+            elapsed = time.monotonic() - started
+            logger.warning("github_api_write_failed", method=method, url=url, duration_seconds=round(elapsed, 3), error=str(exc))
+            raise GitHubAPIError(f"GitHub request failed: {exc}", detail=exc) from exc
+        if resp.status_code == 403 and "rate limit" in resp.text.lower():
+            raise GitHubRateLimitError("GitHub rate limit exceeded", detail=resp.text)
+        if resp.status_code >= 400:
+            raise GitHubAPIError(
+                f"GitHub API {resp.status_code} for {method} {url}", detail=resp.text
+            )
+        elapsed = time.monotonic() - started
+        logger.info("github_api_write", method=method, url=url, status=resp.status_code, duration_seconds=round(elapsed, 3))
+        return resp.json()
+
+    async def create_branch(
+        self, owner: str, repo: str, branch_name: str, from_sha: str
+    ) -> dict[str, Any]:
+        """Create a new branch ref pointing to from_sha.
+
+        Returns the created ref object (contains ``ref`` and ``sha`` keys).
+        """
+        return await self._request_json(
+            "POST",
+            f"/repos/{owner}/{repo}/git/refs",
+            json={"ref": f"refs/heads/{branch_name}", "sha": from_sha},
+        )
+
+    async def create_pr(
+        self, owner: str, repo: str, title: str, head: str, base: str, body: str = "",
+    ) -> dict[str, Any]:
+        """Create a pull request. Returns the PR object (contains ``html_url``, ``number``)."""
+        return await self._request_json(
+            "POST",
+            f"/repos/{owner}/{repo}/pulls",
+            json={"title": title, "head": head, "base": base, "body": body},
+        )
 
     async def get_pr(self, owner: str, repo: str, pr_number: int) -> dict[str, Any]:
         resp = await self._get(f"/repos/{owner}/{repo}/pulls/{pr_number}")

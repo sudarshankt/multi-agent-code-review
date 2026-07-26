@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import time
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -51,6 +52,7 @@ async def _run_review(review_id: str) -> None:
     if not review:
         return
 
+    review_started = time.monotonic()
     try:
         from src.agents.orchestrator import get_graph
         from src.api.endpoints.sse import publish_event
@@ -59,6 +61,7 @@ async def _run_review(review_id: str) -> None:
         await publish_event(review_id, "status_update", {"status": review.status.value})
 
         # Fetch PR data if not already done.
+        fetch_started = time.monotonic()
         if not review.pr_info.head_sha:
             async with GitHubService() as gh:
                 pr_data = await gh.fetch_pr_data(
@@ -73,8 +76,53 @@ async def _run_review(review_id: str) -> None:
         else:
             files = {}  # Already have files from initial fetch.
             diffs = {}
+        fetch_duration = time.monotonic() - fetch_started
+        logger.info(
+            "review_phase_fetch",
+            review_id=review_id,
+            files=len(files),
+            diffs=len(diffs),
+            duration_seconds=round(fetch_duration, 3),
+        )
+
+        # Create a snapshot branch from the source branch BEFORE evaluation.
+        # This branch preserves the original code so we can open a baseline PR
+        # later showing what the code looked like without AI fixes.
+        snapshot_started = time.monotonic()
+        source_branch = review.pr_info.head_branch or "main"
+        snapshot_branch = f"{source_branch}-baseline-{review_id[:8]}"
+        try:
+            async with GitHubService() as gh:
+                # Get the latest SHA of the source branch.
+                ref_data = await gh._request_json(
+                    "GET",
+                    f"/repos/{review.pr_info.owner}/{review.pr_info.repo}/git/ref/heads/{source_branch}",
+                )
+                source_sha = ref_data["object"]["sha"]
+                await gh.create_branch(
+                    review.pr_info.owner, review.pr_info.repo,
+                    snapshot_branch, source_sha,
+                )
+                review.snapshot_branch = snapshot_branch
+                logger.info(
+                    "snapshot_branch_created",
+                    review_id=review_id,
+                    branch=snapshot_branch,
+                    sha=source_sha[:7],
+                    duration_seconds=round(time.monotonic() - snapshot_started, 3),
+                )
+        except Exception as exc:
+            logger.warning(
+                "snapshot_branch_failed",
+                review_id=review_id,
+                branch=snapshot_branch,
+                error=str(exc),
+            )
+            # Don't fail the review — snapshot branch is a nice-to-have.
+            snapshot_branch = ""
 
         # Run the orchestrator graph.
+        graph_started = time.monotonic()
         graph = get_graph()
         input_state = {
             "pr_info": review.pr_info,
@@ -90,6 +138,7 @@ async def _run_review(review_id: str) -> None:
             "files_bypassed": 0,
         }
         result = await graph.ainvoke(input_state)
+        graph_duration = time.monotonic() - graph_started
 
         # Update review with results.
         findings = result.get("findings", [])
@@ -108,6 +157,7 @@ async def _run_review(review_id: str) -> None:
         review.proposed_fixes = proposed_fixes
         review.status = ReviewStatus.COMPLETED
 
+        total_duration = time.monotonic() - review_started
         await publish_event(review_id, "status_update", {"status": review.status.value})
         logger.info(
             "review_completed",
@@ -115,12 +165,16 @@ async def _run_review(review_id: str) -> None:
             findings=review.total_findings,
             fixes=review.total_fixes,
             fix_pr_url=review.fix_pr_url,
+            fetch_duration_seconds=round(fetch_duration, 3),
+            graph_duration_seconds=round(graph_duration, 3),
+            total_duration_seconds=round(total_duration, 3),
         )
 
     except Exception as exc:  # noqa: BLE001 - catch all, mark as failed
+        total_duration = time.monotonic() - review_started
         review.status = ReviewStatus.FAILED
         review.error_message = str(exc)
-        logger.error("review_failed", review_id=review_id, error=str(exc))
+        logger.error("review_failed", review_id=review_id, error=str(exc), total_duration_seconds=round(total_duration, 3))
         await publish_event(review_id, "status_update", {"status": review.status.value})
 
 
@@ -283,6 +337,7 @@ async def get_review(review_id: str) -> ReviewDetailResponse:
         total_findings=review.total_findings,
         total_fixes=review.total_fixes,
         fix_pr_url=review.fix_pr_url,
+        baseline_pr_url=review.baseline_pr_url,
         created_at=review.created_at,
         updated_at=review.updated_at,
         completed_at=review.completed_at,

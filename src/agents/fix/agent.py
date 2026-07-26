@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import ast
 import difflib
+import time
 from typing import Any
 
 from src.core.constants import (
@@ -58,11 +59,21 @@ class FixAgent:
         ProposedFix with a unified diff. Nothing is committed to GitHub.
         """
         context = context or {}
+        started = time.monotonic()
 
         eligible = [f for f in findings if f.severity.value in FIXABLE_SEVERITIES]
         by_category: dict[str, list[Finding]] = {}
         for f in eligible:
             by_category.setdefault(f.category.value, []).append(f)
+
+        logger.info(
+            "fix_generation_start",
+            review_id=review_id,
+            total_findings=len(findings),
+            eligible_findings=len(eligible),
+            categories=list(by_category.keys()),
+            fixable_severities=FIXABLE_SEVERITIES,
+        )
 
         all_proposals: list[ProposedFix] = []
         current_files = dict(files)
@@ -70,12 +81,27 @@ class FixAgent:
         for category in FIX_CATEGORY_ORDER:
             if category not in by_category:
                 continue
+            cat_started = time.monotonic()
             proposals, updated = await self._propose_category(
                 current_files, by_category[category], category, review_id
+            )
+            cat_elapsed = time.monotonic() - cat_started
+            logger.info(
+                "fix_category_complete",
+                category=category,
+                proposals=len(proposals),
+                duration_seconds=round(cat_elapsed, 3),
             )
             all_proposals.extend(proposals)
             current_files = updated
 
+        total_elapsed = time.monotonic() - started
+        logger.info(
+            "fix_generation_complete",
+            review_id=review_id,
+            total_proposals=len(all_proposals),
+            total_duration_seconds=round(total_elapsed, 3),
+        )
         return all_proposals
 
     async def _propose_category(
@@ -305,11 +331,13 @@ class FixAgent:
         result = FixResult(category=Cat(category), file_path=file_path)
         result.original_code = code
 
+        fix_started = time.monotonic()
         try:
             prompt = render("fix.j2", category=category, file_path=file_path, code=code, findings=findings)
             payload = await self.llm.complete_json(prompt)
         except Exception as exc:
-            logger.warning("llm_fix_failed", file=file_path, error=str(exc))
+            elapsed = time.monotonic() - fix_started
+            logger.warning("llm_fix_failed", file=file_path, error=str(exc), duration_seconds=round(elapsed, 3))
             result.error = str(exc)
             return result, None
 

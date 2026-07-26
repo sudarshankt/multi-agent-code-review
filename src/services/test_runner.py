@@ -101,22 +101,151 @@ async def _install_clone_deps(python_exe: str, clone_dir: str) -> list[str]:
     return installed
 
 
-def _extract_missing_module(stdout: str, stderr: str) -> str | None:
-    """Parse ``ModuleNotFoundError: No module named 'xxx'`` from pytest output."""
-    m = re.search(r"ModuleNotFoundError: No module named '(\w+)'", stdout + stderr)
-    return m.group(1) if m else None
+# ---------------------------------------------------------------------------
+# Generic error extraction — try to find anything we can auto-fix
+# ---------------------------------------------------------------------------
 
+# Any Python exception class name (used to detect collection errors generically).
+_COLLECTION_ERROR_SIGNALS = (
+    "ERROR collecting",
+    "INTERNALERROR",
+    "error:",
+)
+# Patterns that indicate the test run itself had errors (not just failures).
+_TEST_RUN_ERROR_SIGNALS = (
+    "ImportError",
+    "ModuleNotFoundError",
+    "No module named",
+    "KeyError:",
+    "NameError:",
+    "AttributeError: module",
+    "RuntimeError:",
+    "FileNotFoundError:",
+    "OSError:",
+    "PermissionError:",
+    "cannot import name",
+    "No such file or directory",
+)
+
+_MODULE_NAME_RE = re.compile(r"No module named ['\"](\w+)['\"]")
+_CANNOT_IMPORT_RE = re.compile(r"cannot import name ['\"](\w+)['\"]")
+
+# --- Env var extraction (generic) ---
 
 _ENV_VAR_ERROR_RE = re.compile(
     r"RuntimeError:\s*['\"]?(\w+)\s+environment\s+variable\s+not\s+(?:set|found)",
     re.IGNORECASE,
 )
+_OS_ENVIRON_ACCESS_RE = re.compile(
+    r"os\.environ\[['\"](\w+)['\"]\]",
+)
+_KEYERROR_VAR_RE = re.compile(
+    r"KeyError:\s*['\"](\w+)['\"]",
+)
+_OS_GETENV_RE = re.compile(
+    r"os\.getenv\(\s*['\"](\w+)['\"]\s*\)",
+)
+_NAMEERROR_NAME_RE = re.compile(
+    r"NameError:\s*.*name\s+['\"](\w+)['\"]\s+is\s+not\s+defined",
+)
+
+
+def _extract_all_missing_modules(stdout: str, stderr: str) -> list[str]:
+    """Extract every missing module name from pytest output.
+
+    Handles: ``ModuleNotFoundError: No module named 'xxx'`` and
+    ``ImportError: cannot import name 'yyy'``.
+    """
+    combined = stdout + stderr
+    modules: list[str] = []
+    for m in _MODULE_NAME_RE.finditer(combined):
+        name = m.group(1)
+        if name not in modules:
+            modules.append(name)
+    return modules
+
+
+def _extract_missing_module(stdout: str, stderr: str) -> str | None:
+    """Return the first missing module, or None. Kept for backward compat."""
+    names = _extract_all_missing_modules(stdout, stderr)
+    return names[0] if names else None
 
 
 def _extract_missing_env_var(stdout: str, stderr: str) -> str | None:
-    """Parse ``RuntimeError: API_KEY environment variable not set`` from pytest output."""
-    m = _ENV_VAR_ERROR_RE.search(stdout + stderr)
-    return m.group(1) if m else None
+    """Extract the name of a missing environment variable from pytest output.
+
+    Handles ANY pattern that looks like a missing env var:
+    1. ``RuntimeError: VAR environment variable not set``
+    2. ``os.environ["VAR"]`` → ``KeyError: 'VAR'``
+    3. ``os.getenv("VAR")`` without default
+    4. Bare ``KeyError: 'VAR'`` anywhere near ``os.environ``
+    5. ``NameError: name 'VAR' is not defined`` (common when env var loaded at module level)
+    """
+    combined = stdout + stderr
+
+    # Pattern 1
+    m = _ENV_VAR_ERROR_RE.search(combined)
+    if m:
+        return m.group(1)
+
+    # Pattern 2+4: os.environ["VAR"] with KeyError
+    os_match = _OS_ENVIRON_ACCESS_RE.search(combined)
+    key_match = _KEYERROR_VAR_RE.search(combined)
+    if os_match and key_match and os_match.group(1) == key_match.group(1):
+        return os_match.group(1)
+
+    # Pattern 3: os.getenv("VAR") — only if it has no default (single arg)
+    getenv_match = _OS_GETENV_RE.search(combined)
+    if getenv_match and "KeyError" in combined:
+        return getenv_match.group(1)
+
+    # Pattern 4: bare KeyError with os.environ context
+    if key_match and "os.environ" in combined:
+        return key_match.group(1)
+
+    # Pattern 5: NameError for ALL_CAPS names (likely an env var loaded at module level)
+    name_match = _NAMEERROR_NAME_RE.search(combined)
+    if name_match and name_match.group(1).isupper():
+        return name_match.group(1)
+
+    return None
+
+
+def _is_collection_error(stdout: str, stderr: str, exit_code: int) -> bool:
+    """Return True if pytest failed during test *collection* (auto-fixable)
+    rather than during test *execution* (not auto-fixable)."""
+    combined = stdout + stderr
+
+    # Exit code 2 = error during collection/execution (not test failures)
+    # Exit code 4 = internal pytest error
+    if exit_code in (2, 4):
+        return True
+
+    # Explicit collection-phase error markers
+    for signal in _COLLECTION_ERROR_SIGNALS:
+        if signal in combined:
+            return True
+
+    return False
+
+
+def _diagnose_error(combined: str) -> str:
+    """Return a short human-readable summary of what went wrong."""
+    if "KeyError:" in combined:
+        return "missing environment variable(s)"
+    if "ModuleNotFoundError:" in combined or "ImportError:" in combined or "No module named" in combined:
+        return "missing Python module(s)"
+    if "FileNotFoundError:" in combined or "No such file or directory" in combined:
+        return "missing file or directory"
+    if "PermissionError:" in combined:
+        return "permission denied"
+    if "NameError:" in combined:
+        return "undefined name (likely missing import or env var)"
+    if "RuntimeError:" in combined:
+        return "runtime error — check traceback"
+    if "OSError:" in combined:
+        return "OS error — check traceback"
+    return "unknown collection error"
 
 
 # ---------------------------------------------------------------------------
@@ -161,13 +290,20 @@ class TestRunResult:
 
 
 class TestRunner:
-    """Clone a PR branch into a temp dir and run pytest against it."""
+    """Clone a PR branch into a temp dir and run pytest against it.
 
-    CLONE_TIMEOUT_SECS: int = 60
-    TEST_TIMEOUT_SECS: int = 120
+    Timeouts are read from settings (configurable via .env):
+    - test_gate_timeout_secs  → pytest runtime (default 300)
+    - clone uses a fixed 120s ceiling (git clone is network-bound, not test-bound).
+    """
 
     def __init__(self, settings=None) -> None:
         self.settings = settings or get_settings()
+        cfg = self.settings
+        self._pytest_timeout: float = float(
+            getattr(cfg, "test_gate_timeout_secs", None) or 600
+        )
+        self._clone_timeout: float = 300.0
 
     async def run_tests(self, owner: str, repo: str, branch: str) -> TestRunResult:
         """
@@ -202,38 +338,63 @@ class TestRunner:
             else:
                 python_exe = _resolve_venv_python()
 
-            # Run pytest.  If there's a ModuleNotFoundError for a package
-            # not covered by requirements*.txt, try installing it and retry.
-            # If there's a RuntimeError about a missing environment variable,
-            # inject a test-default value and retry.  Both retry patterns
-            # can fire independently (we loop through them until one fixes
-            # the skip or no more fixes are possible).
+            # Run pytest.  If collection fails, try to auto-fix whatever is
+            # broken: install missing packages, inject missing env vars, etc.
+            # The retry loop extracts ALL fixable problems each iteration
+            # instead of fixing one at a time — this handles cascading errors
+            # (e.g. a missing module that itself needs env vars).
             result = await self._run_pytest(tmp_dir)
             retries = 0
-            while result.skipped and retries < 3:
+            max_retries = 5
+            injected_env_vars: set[str] = set()
+
+            while retries < max_retries:
+                if not result.skipped:
+                    break
                 retries += 1
 
-                # --- dependency retry ---
-                missing = _extract_missing_module(result.stdout, result.stderr)
-                if missing:
-                    logger.info("test_retry_install_missing", module=missing)
-                    ok, _ = await _pip_install(python_exe, [missing], tmp_dir)
-                    if not ok:
-                        break  # can't install — give up
-                    result = await self._run_pytest(tmp_dir)
-                    continue
+                combined = result.stdout + result.stderr
+                fixed_something = False
 
-                # --- env-var retry ---
+                # --- 1. Try installing every missing module ---
+                missing_modules = _extract_all_missing_modules(
+                    result.stdout, result.stderr,
+                )
+                for mod_name in missing_modules:
+                    logger.info(
+                        "test_retry_install",
+                        module=mod_name,
+                        retry=retries,
+                    )
+                    ok, _ = await _pip_install(python_exe, [mod_name], tmp_dir)
+                    if ok:
+                        fixed_something = True
+
+                # --- 2. Try injecting every missing env var ---
                 missing_var = _extract_missing_env_var(result.stdout, result.stderr)
-                if missing_var:
+                if missing_var and missing_var not in injected_env_vars:
+                    injected_env_vars.add(missing_var)
                     test_value = f"test-{missing_var.lower()}-auto-injected"
-                    logger.info("test_retry_env_var", var=missing_var, value=test_value)
+                    logger.info(
+                        "test_retry_env_var",
+                        var=missing_var,
+                        value=test_value,
+                        retry=retries,
+                    )
                     os.environ[missing_var] = test_value
-                    result = await self._run_pytest(tmp_dir)
-                    continue
+                    fixed_something = True
 
-                # Neither module nor env-var — no more fixes to try
-                break
+                if not fixed_something:
+                    logger.warning(
+                        "test_auto_fix_exhausted",
+                        retries=retries,
+                        skip_reason=result.skip_reason,
+                        output_tail=combined[-500:] if len(combined) > 500 else combined,
+                    )
+                    break
+
+                # Re-run with the fixes applied
+                result = await self._run_pytest(tmp_dir)
 
             return result
         except Exception as exc:
@@ -262,7 +423,7 @@ class TestRunner:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=self.CLONE_TIMEOUT_SECS)
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=self._clone_timeout)
             if proc.returncode != 0:
                 logger.warning("git_clone_failed", stderr=stderr.decode(errors="replace")[:500])
                 return False
@@ -295,7 +456,7 @@ class TestRunner:
                 cwd=clone_dir,
             )
             stdout_b, stderr_b = await asyncio.wait_for(
-                proc.communicate(), timeout=self.TEST_TIMEOUT_SECS
+                proc.communicate(), timeout=self._pytest_timeout
             )
             stdout = stdout_b.decode(errors="replace")
             stderr = stderr_b.decode(errors="replace")
@@ -362,22 +523,24 @@ class TestRunner:
             return stdout
 
     def _parse_result(self, stdout: str, stderr: str, exit_code: int) -> TestRunResult:
+        combined = stdout + stderr
+
         # No tests collected — not a failure, just nothing to gate on
         if exit_code == _EXIT_NO_TESTS:
-            combined = stdout + stderr
             return TestRunResult(
                 passed=True, exit_code=exit_code, skipped=True,
                 skip_reason="no tests found in repository",
                 stdout=combined,
             )
 
-        # Missing dependencies → graceful skip (retry was already attempted)
-        combined = stdout + stderr
-        missing_dep_signals = ("ERROR collecting", "ImportError", "ModuleNotFoundError", "No module named")
-        if any(s in combined for s in missing_dep_signals):
+        # Test collection error — auto-fixable (missing deps, env vars, etc.)
+        # We treat ANY collection error as skippable so the retry loop gets a
+        # chance to fix it.
+        if _is_collection_error(stdout, stderr, exit_code):
+            reason = _diagnose_error(combined)
             return TestRunResult(
                 passed=True, exit_code=exit_code, skipped=True,
-                skip_reason="test collection failed (missing dependencies — tried auto-installing, still missing)",
+                skip_reason=f"collection error: {reason} — attempting auto-fix",
                 stdout=stdout, stderr=stderr,
             )
 

@@ -1,70 +1,118 @@
 {
-  "generated_at": "2026-07-25T09:51:05.402203Z",
+  "generated_at": "2026-07-26T08:50:45.250696Z",
   "models": [
     {
-      "model_label": "nav",
+      "model_label": "deepseek",
       "cases": 6,
-      "success_rate": 0.0,
-      "syntax_valid_rate": 0.0,
-      "resolved_rate": 0.0,
-      "avg_correctness": 0.0,
-      "avg_safety": 0.0,
-      "avg_minimality": 0.0,
-      "avg_explanation_quality": 0.0,
+      "success_rate": 1.0,
+      "syntax_valid_rate": 1.0,
+      "resolved_rate": 1.0,
+      "avg_correctness": 0.933,
+      "avg_safety": 0.9,
+      "avg_minimality": 0.958,
+      "avg_explanation_quality": 0.983,
       "case_results": [
         {
-          "model_label": "nav",
+          "model_label": "deepseek",
           "file": "tests/test_data/app_vunerable.py",
           "category": "security",
-          "success": false,
-          "syntax_valid": null,
-          "error": "NAV LLM gateway call failed: Server error '500 INTERNAL SERVER ERROR' for url 'https://azureservice.aiml.test.navbackoffice.com/api/v1/chat/azure'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
-          "judge": null
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 0.9,
+            "safety": 0.95,
+            "minimality": 1.0,
+            "explanation_quality": 1.0,
+            "regression_risk": "low",
+            "notes": "All findings resolved: API key from env, MD5 replaced with SHA256 (still bare but no longer broken), path traversal fix using realpath, pickle replaced with json, command injection fixed by using subprocess arg list. Password storage still lacks salting, but the specific finding was about MD5."
+          }
         },
         {
-          "model_label": "nav",
+          "model_label": "deepseek",
           "file": "tests/test_data/profile.py",
           "category": "security",
-          "success": false,
-          "syntax_valid": null,
-          "error": "NAV LLM gateway call failed: Server error '500 INTERNAL SERVER ERROR' for url 'https://azureservice.aiml.test.navbackoffice.com/api/v1/chat/azure'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
-          "judge": null
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 0.85,
+            "safety": 0.7,
+            "minimality": 0.9,
+            "explanation_quality": 0.95,
+            "regression_risk": "medium",
+            "notes": "Adds SSRF validation blocking private IPs and non-http schemes, but DNS resolution lacks timeout providing a DoS vector; changes exception type for invalid/empty URLs."
+          }
         },
         {
-          "model_label": "nav",
+          "model_label": "deepseek",
           "file": "tests/test_data/app_vunerable-v1.py",
           "category": "security",
-          "success": false,
-          "syntax_valid": null,
-          "error": "NAV LLM gateway call failed: Server error '500 INTERNAL SERVER ERROR' for url 'https://azureservice.aiml.test.navbackoffice.com/api/v1/chat/azure'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
-          "judge": null
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 0.95,
+            "safety": 0.95,
+            "minimality": 0.9,
+            "explanation_quality": 0.95,
+            "regression_risk": "low",
+            "notes": "All security findings addressed with targeted modifications; minor room for SSRF bypass via DNS rebinding but solid mitigation."
+          }
         },
         {
-          "model_label": "nav",
+          "model_label": "deepseek",
           "file": "eval/golden/samples/bug_sample.py",
           "category": "bug_detection",
-          "success": false,
-          "syntax_valid": null,
-          "error": "NAV LLM gateway call failed: Server error '500 INTERNAL SERVER ERROR' for url 'https://azureservice.aiml.test.navbackoffice.com/api/v1/chat/azure'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
-          "judge": null
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 1.0,
+            "safety": 1.0,
+            "minimality": 1.0,
+            "explanation_quality": 1.0,
+            "regression_risk": "none",
+            "notes": "All findings fixed precisely; no new issues."
+          }
         },
         {
-          "model_label": "nav",
+          "model_label": "deepseek",
           "file": "eval/golden/samples/performance_sample.py",
           "category": "performance",
-          "success": false,
-          "syntax_valid": null,
-          "error": "NAV LLM gateway call failed: Server error '500 INTERNAL SERVER ERROR' for url 'https://azureservice.aiml.test.navbackoffice.com/api/v1/chat/azure'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
-          "judge": null
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 0.9,
+            "safety": 0.8,
+            "minimality": 0.95,
+            "explanation_quality": 1.0,
+            "regression_risk": "medium",
+            "notes": "Fixed all four performance issues, but duplicates order change (second occurrence vs first occurrence) could break code relying on original order; contains_any set conversion fails on unhashable items; caching changes file re-read semantics."
+          }
         },
         {
-          "model_label": "nav",
+          "model_label": "deepseek",
           "file": "eval/golden/samples/style_sample.py",
           "category": "style",
-          "success": false,
-          "syntax_valid": null,
-          "error": "NAV LLM gateway call failed: Server error '500 INTERNAL SERVER ERROR' for url 'https://azureservice.aiml.test.navbackoffice.com/api/v1/chat/azure'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
-          "judge": null
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 1.0,
+            "safety": 1.0,
+            "minimality": 1.0,
+            "explanation_quality": 1.0,
+            "regression_risk": "low",
+            "notes": "All style findings resolved correctly; safe, minimal, and well-explained. Bare-except to Exception is standard but could theoretically change behavior if non-Exception signals were intended to be caught, hence low regression risk."
+          }
         }
       ]
     }

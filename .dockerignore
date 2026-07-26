@@ -1,0 +1,58 @@
+# ── Python ──
+__pycache__/
+*.py[codz]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+*.so
+
+# ── Virtual environments ──
+.venv/
+venv/
+env/
+
+# ── Node / frontend ──
+node_modules/
+dashboard/node_modules/
+dashboard/dist/
+
+# ── Secrets & env ──
+.env
+.env.*
+!.env.example
+
+# ── Git ──
+.git/
+.gitattributes
+.gitignore
+.gitmodules
+
+# ── IDE & OS ──
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Tests & coverage ──
+.pytest_cache/
+.coverage
+htmlcov/
+.coverage.*
+cover/
+
+# ── Docker ──
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# ── Misc ──
+*.log
+.chroma/
+chroma-data/
+redis-data/
+eval_PR_results/
+eval/results/

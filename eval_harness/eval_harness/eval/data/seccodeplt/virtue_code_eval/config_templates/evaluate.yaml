@@ -1,0 +1,9 @@
+defaults:
+  - hydra_conf
+  - evaluate_base
+  - models:
+      - gpt4o
+  - tasks:
+      - secodeplt_python_autocomplete
+      - secodeplt_python_instruct
+  - _self_

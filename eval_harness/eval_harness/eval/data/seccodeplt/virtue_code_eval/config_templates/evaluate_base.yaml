@@ -1,0 +1,7 @@
+# all configs for the evaluate run
+
+# save every n-th iteration
+save_every: 80
+
+# batch size for querying llm
+batch_size: 20

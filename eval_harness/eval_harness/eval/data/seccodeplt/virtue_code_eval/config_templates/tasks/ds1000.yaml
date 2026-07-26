@@ -1,0 +1,6 @@
+ds1000:
+  num_data: -1
+  enabled: true
+  subtasks:
+    lib: [ "Numpy","Pandas","Scipy","Matplotlib","Sklearn","Tensorflow","Pytorch" ]
+  metrics: [ "unittest" ]

@@ -1,0 +1,5 @@
+deepseek_coder_33b:
+  enabled: true
+  model_name: deepseek-ai/deepseek-coder-33b-instruct
+  chat_config:
+    n: 1

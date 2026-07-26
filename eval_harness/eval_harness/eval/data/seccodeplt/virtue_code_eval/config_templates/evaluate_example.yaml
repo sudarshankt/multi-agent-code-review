@@ -1,0 +1,15 @@
+defaults:
+  - hydra_conf
+  - evaluate_base
+  - models:
+    - gpt4o
+  - tasks:
+    - secodeplt_juliet_autocomplete
+  - _self_
+
+tasks:
+  secodeplt_juliet_autocomplete:
+    num_data: 20
+
+
+

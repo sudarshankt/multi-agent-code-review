@@ -33,7 +33,7 @@ import logging
 from dataclasses import dataclass
 
 from eval.common import LLMCache
-from eval.llm_config import JUDGE_MODEL, MAX_TOKENS, get_client
+from eval.llm_config import api_key_configured, call_llm, get_judge_model
 
 logger = logging.getLogger(__name__)
 
@@ -167,26 +167,22 @@ def _format_final_report(final_report: dict) -> str:
 
 
 def _call_judge_llm(prompt: str) -> str:
-    """Calls JUDGE_MODEL if ANTHROPIC_API_KEY is configured; otherwise
-    returns "{}" so the harness still runs end-to-end in placeholder mode.
-    Cached via LLMCache (keyed on prompt+model) so repeated runs during
-    development don't re-spend API budget.
+    """Calls the configured judge model (any provider — see
+    eval.llm_config.get_judge_model / EVAL_HARNESS_JUDGE_MODEL) if that
+    provider's API key is configured; otherwise returns "{}" so the harness
+    still runs end-to-end in placeholder mode. Cached via LLMCache (keyed on
+    prompt+model) so repeated runs during development don't re-spend API
+    budget. Reads the model at call time (not import time) so the GUI's
+    judge-model picker takes effect on the next run without a restart.
     """
-    client = get_client()
-    if client is None:
-        logger.info("No API key configured — returning placeholder judge response.")
+    model = get_judge_model()
+    if not api_key_configured(model):
+        logger.info("No API key configured for judge model %s — returning placeholder judge response.", model)
         return "{}"
 
-    def _call() -> str:
-        response = client.messages.create(
-            model=JUDGE_MODEL,
-            max_tokens=MAX_TOKENS,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.content[0].text
-
     try:
-        return LLMCache().get_or_call(prompt, JUDGE_MODEL, _call)
+        result = LLMCache().get_or_call(prompt, model, lambda: call_llm(model, prompt))
+        return result or "{}"
     except Exception as e:
         logger.error("Judge API call failed: %s", e)
         return "{}"

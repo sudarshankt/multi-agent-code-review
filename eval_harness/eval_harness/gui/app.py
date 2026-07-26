@@ -13,6 +13,7 @@ Run with:
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -22,6 +23,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from eval.common import load_config  # noqa: E402
+from eval.llm_config import AVAILABLE_MODELS, api_key_configured, get_baseline_model, get_judge_model  # noqa: E402
 
 st.set_page_config(page_title="Multi-Agent Code Review — Evaluation Harness", layout="wide")
 
@@ -44,11 +46,44 @@ def log(msg: str) -> None:
 
 
 def dataset_status() -> dict:
+    from eval.datasets.download_patcheval import DATA_REL_PATHS as PATCHEVAL_DATA_REL_PATHS
+
+    patcheval_dest = DATA_DIR / "patcheval"
     return {
         "SecCodePLT (Security)": (DATA_DIR / "seccodeplt" / "virtue_code_eval" / "data" / "safety" / "secodeplt" / "data.json").exists(),
         "BugsInPy (Bug Detection)": (DATA_DIR / "bugsinpy" / "projects").exists(),
-        "PatchEval (Patch Generation)": (DATA_DIR / "patcheval" / "patcheval" / "datasets" / "input.json").exists(),
+        "PatchEval (Patch Generation)": any((patcheval_dest / p).exists() for p in PATCHEVAL_DATA_REL_PATHS),
     }
+
+
+@st.cache_data(show_spinner=False)
+def dataset_counts() -> dict:
+    """Actual sample counts available on disk for each dataset, so the
+    sidebar sliders can't be dragged past what's really there. None means
+    "not downloaded yet" — callers should fall back to a placeholder max.
+    Cached per Streamlit session; the "Download missing datasets" button
+    clears this cache so counts refresh right after a download.
+    """
+    counts: dict[str, int | None] = {"seccodeplt": None, "bugsinpy": None, "patcheval": None}
+    try:
+        from eval.datasets.download_seccodeplt import load_samples
+
+        counts["seccodeplt"] = len(load_samples(sample_n=10**9))
+    except Exception:
+        pass
+    try:
+        from eval.datasets.download_bugsinpy import load_sample
+
+        counts["bugsinpy"] = len(load_sample(sample_n=10**9))
+    except Exception:
+        pass
+    try:
+        from eval.datasets.download_patcheval import load_python_subset
+
+        counts["patcheval"] = len(load_python_subset(sample_n=10**9))
+    except Exception:
+        pass
+    return counts
 
 
 def load_json(path: Path) -> dict | None:
@@ -133,6 +168,7 @@ if st.sidebar.button("⬇️ Download missing datasets"):
             log("Downloaded/verified PatchEval.")
         except Exception as e:
             log(f"PatchEval download issue: {e}")
+    dataset_counts.clear()
     st.rerun()
 
 st.sidebar.divider()
@@ -154,9 +190,27 @@ sampling_mode = st.sidebar.radio(
 )
 use_shared = sampling_mode.startswith("Shared")
 
-n_seccodeplt = st.sidebar.slider("SecCodePLT samples (Security)", 2, 100, 10, step=2)
-n_bugsinpy = st.sidebar.slider("BugsInPy samples (Bug Detection)", 2, 100, 10, step=2)
-n_patcheval = st.sidebar.slider("PatchEval samples (Patch Generation)", 2, 50, 10, step=2)
+counts = dataset_counts()
+
+
+def sample_slider(label: str, key: str, placeholder_max: int, default: int) -> int:
+    """Slider capped at the dataset's real on-disk sample count. Falls back
+    to a placeholder max (with a note) if the dataset hasn't been
+    downloaded yet, so the slider still renders before Step 1 is done."""
+    available = counts.get(key)
+    if available is None:
+        st.sidebar.caption(f"⬜ {label.split(' (')[0]} not downloaded yet — showing a placeholder range.")
+        max_value = placeholder_max
+    else:
+        max_value = max(available, 2)
+        st.sidebar.caption(f"{available} samples available on disk.")
+    default_value = min(default, max_value)
+    return st.sidebar.slider(label, 2, max_value, default_value, step=2)
+
+
+n_seccodeplt = sample_slider("SecCodePLT samples (Security)", "seccodeplt", 100, 10)
+n_bugsinpy = sample_slider("BugsInPy samples (Bug Detection)", "bugsinpy", 100, 10)
+n_patcheval = sample_slider("PatchEval samples (Patch Generation)", "patcheval", 50, 10)
 style_files_glob = st.sidebar.text_input(
     "Python files to lint (Style Agent), glob pattern",
     value="eval/*.py",
@@ -173,10 +227,59 @@ st.sidebar.divider()
 
 
 # ============================================================================
-# Sidebar — Step 3: Choose layers
+# Sidebar — Step 3: Choose models (judge + zero-shot baseline)
 # ============================================================================
 
-st.sidebar.header("Step 3 — Choose what to run")
+st.sidebar.header("Step 3 — Choose models")
+st.sidebar.caption(
+    "The judge grades Layer B/C output; the baseline is the single-prompt ablation Layer A "
+    "compares agents against. Keep them different from each other (and from whichever model "
+    "the agents under test run on) — grading with the same model that produced the answer "
+    "biases the score toward what that model already believes."
+)
+
+PROVIDER_LABELS = {"anthropic": "Claude (Anthropic)", "deepseek": "DeepSeek", "openai": "OpenAI"}
+_key_present = {
+    "anthropic": api_key_configured("claude-opus-4-8"),
+    "deepseek": api_key_configured("deepseek-v4-pro"),
+    "openai": api_key_configured("gpt-4o"),
+}
+
+
+def model_picker(label: str, current_model: str, state_prefix: str) -> str:
+    providers = list(AVAILABLE_MODELS)
+    current_provider = next((p for p in providers if current_model in AVAILABLE_MODELS[p]), providers[0])
+    provider = st.sidebar.selectbox(
+        f"{label} — provider", providers, index=providers.index(current_provider),
+        format_func=lambda p: f"{PROVIDER_LABELS[p]}{'' if _key_present[p] else ' — no API key set'}",
+        key=f"{state_prefix}_provider",
+    )
+    models = AVAILABLE_MODELS[provider]
+    default_model = current_model if current_model in models else models[0]
+    model = st.sidebar.selectbox(
+        f"{label} — model", models, index=models.index(default_model), key=f"{state_prefix}_model",
+    )
+    if not _key_present[provider]:
+        st.sidebar.warning(
+            f"No API key configured for {PROVIDER_LABELS[provider]} — this role will fall back to "
+            "placeholder output until one is set in .env."
+        )
+    return model
+
+
+judge_model = model_picker("Judge LLM", get_judge_model(), "judge")
+baseline_model = model_picker("Baseline LLM", get_baseline_model(), "baseline")
+os.environ["EVAL_HARNESS_JUDGE_MODEL"] = judge_model
+os.environ["EVAL_HARNESS_BASELINE_MODEL"] = baseline_model
+
+st.sidebar.divider()
+
+
+# ============================================================================
+# Sidebar — Step 4: Choose layers
+# ============================================================================
+
+st.sidebar.header("Step 4 — Choose what to run")
 run_a = st.sidebar.checkbox("Layer A — Per-agent benchmarks", value=True)
 run_b = st.sidebar.checkbox("Layer B — End-to-end PR review", value=True)
 run_c = st.sidebar.checkbox("Layer C — Adversarial resistance", value=True)

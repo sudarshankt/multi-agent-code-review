@@ -364,34 +364,26 @@ def run_full_pipeline(pr_diff: str) -> dict:
 def zero_shot_llm_call(prompt: str, model: str | None = None) -> str:
     """Real single-shot LLM call (no LangGraph, no RAG, no supervisor) —
     this is the ablation baseline from Section 4/Cross-cutting row 1.
-    Uses BASELINE_MODEL from eval.llm_config by default (deliberately a
+    Uses eval.llm_config.get_baseline_model() by default (deliberately a
     different, cheaper/faster model than the judge, and different from
-    whatever the agents under test run on). Cached via LLMCache so
-    repeated runs don't re-spend API budget. Returns "" (same as the
-    unwired placeholder) if no API key is configured or the call fails,
-    so callers can't tell the difference between "not wired" and "call
-    failed" from the return value alone — check eval.llm_config.api_key_configured()
+    whatever the agents under test run on) — any provider (Claude,
+    DeepSeek, OpenAI). Cached via LLMCache so repeated runs don't re-spend
+    API budget. Returns "" (same as the unwired placeholder) if no API key
+    is configured for that model's provider, or the call fails, so callers
+    can't tell the difference between "not wired" and "call failed" from
+    the return value alone — check eval.llm_config.api_key_configured()
     if that distinction matters to your use of this function.
     """
     from eval.common import LLMCache
-    from eval.llm_config import BASELINE_MODEL, MAX_TOKENS, get_client
+    from eval.llm_config import api_key_configured, call_llm, get_baseline_model
 
-    resolved_model = model or BASELINE_MODEL
-    client = get_client()
-    if client is None:
-        logger.info("No API key configured — returning empty placeholder zero-shot response.")
+    resolved_model = model or get_baseline_model()
+    if not api_key_configured(resolved_model):
+        logger.info("No API key configured for baseline model %s — returning empty placeholder zero-shot response.", resolved_model)
         return ""
 
-    def _call() -> str:
-        response = client.messages.create(
-            model=resolved_model,
-            max_tokens=MAX_TOKENS,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.content[0].text
-
     try:
-        return LLMCache().get_or_call(prompt, resolved_model, _call)
+        return LLMCache().get_or_call(prompt, resolved_model, lambda: call_llm(resolved_model, prompt))
     except Exception as e:
         logger.error("Zero-shot baseline API call failed: %s", e)
         return ""

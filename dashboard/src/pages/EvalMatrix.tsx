@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
-import { evalAPI, EvalReport, FixEvalReport, E2EReport } from '../api/client'
-import { AlertTriangle, Bug, Zap, Eye, AlertCircle } from 'lucide-react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { evalAPI, EvalReport, FixEvalReport, E2EReport, EvalType, EvalRunState } from '../api/client'
+import { AlertTriangle, Bug, Zap, Eye, AlertCircle, Play, Loader2, CheckCircle2 } from 'lucide-react'
 
 const categoryIcons: Record<string, React.ReactNode> = {
   security: <AlertTriangle className="w-4 h-4" />,
@@ -13,6 +13,85 @@ function scoreColor(score: number): string {
   if (score >= 0.8) return 'bg-green-100 text-green-800 border-green-300'
   if (score >= 0.5) return 'bg-yellow-100 text-yellow-800 border-yellow-300'
   return 'bg-red-100 text-red-800 border-red-300'
+}
+
+const POLL_INTERVAL_MS = 2000
+
+interface EvalRunControlProps {
+  evalType: EvalType
+  label: string
+  onCompleted: () => void
+}
+
+const EvalRunControl: React.FC<EvalRunControlProps> = ({ evalType, label, onCompleted }) => {
+  const [state, setState] = useState<EvalRunState>('idle')
+  const [error, setError] = useState<string | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }, [])
+
+  useEffect(() => stopPolling, [stopPolling])
+
+  const poll = useCallback(() => {
+    stopPolling()
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await evalAPI.getRunStatus(evalType)
+        setState(res.data.status)
+        if (res.data.status === 'completed') {
+          stopPolling()
+          onCompleted()
+        } else if (res.data.status === 'failed') {
+          stopPolling()
+          setError(res.data.error || 'Eval run failed')
+        }
+      } catch {
+        stopPolling()
+        setError('Lost connection while polling eval run status')
+      }
+    }, POLL_INTERVAL_MS)
+  }, [evalType, onCompleted, stopPolling])
+
+  const handleRun = async () => {
+    setError(null)
+    try {
+      await evalAPI.triggerRun(evalType)
+      setState('running')
+      poll()
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || `Failed to start ${label}`)
+    }
+  }
+
+  const isRunning = state === 'running'
+
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        onClick={handleRun}
+        disabled={isRunning}
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
+          isRunning
+            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+            : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+        }`}
+      >
+        {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+        {isRunning ? 'Running…' : `Run ${label}`}
+      </button>
+      {state === 'completed' && (
+        <span className="inline-flex items-center gap-1 text-green-700 text-xs font-medium">
+          <CheckCircle2 className="w-4 h-4" /> Report updated
+        </span>
+      )}
+      {error && <span className="text-red-700 text-xs font-medium">{error}</span>}
+    </div>
+  )
 }
 
 export const EvalMatrixPage: React.FC = () => {
@@ -28,48 +107,67 @@ export const EvalMatrixPage: React.FC = () => {
   const [e2eLoading, setE2eLoading] = useState(true)
   const [e2eError, setE2eError] = useState<string | null>(null)
 
-  useEffect(() => {
-    evalAPI
+  const fetchReport = useCallback(() => {
+    setLoading(true)
+    return evalAPI
       .getLatest()
-      .then((res) => setReport(res.data))
+      .then((res) => {
+        setReport(res.data)
+        setError(null)
+      })
       .catch((err) => setError(err?.response?.data?.detail || 'Failed to load eval report'))
       .finally(() => setLoading(false))
+  }, [])
 
-    evalAPI
+  const fetchFixReport = useCallback(() => {
+    setFixLoading(true)
+    return evalAPI
       .getLatestFix()
-      .then((res) => setFixReport(res.data))
+      .then((res) => {
+        setFixReport(res.data)
+        setFixError(null)
+      })
       .catch((err) => setFixError(err?.response?.data?.detail || 'Failed to load fix-eval report'))
       .finally(() => setFixLoading(false))
+  }, [])
 
-    evalAPI
+  const fetchE2eReport = useCallback(() => {
+    setE2eLoading(true)
+    return evalAPI
       .getLatestE2E()
-      .then((res) => setE2eReport(res.data))
+      .then((res) => {
+        setE2eReport(res.data)
+        setE2eError(null)
+      })
       .catch((err) => setE2eError(err?.response?.data?.detail || 'Failed to load e2e-eval report'))
       .finally(() => setE2eLoading(false))
   }, [])
 
-  if (loading) {
-    return <div className="max-w-6xl mx-auto px-6 py-8 text-gray-500">Loading evaluation matrix...</div>
-  }
+  useEffect(() => {
+    fetchReport()
+    fetchFixReport()
+    fetchE2eReport()
+  }, [fetchReport, fetchFixReport, fetchE2eReport])
 
-  if (error || !report) {
-    return (
-      <div className="max-w-6xl mx-auto px-6 py-8">
+  return (
+    <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="flex items-start justify-between gap-4 mb-1 flex-wrap">
+        <h1 className="text-2xl font-bold">Agent Evaluation Matrix</h1>
+        <EvalRunControl evalType="finding" label="Finding Eval" onCompleted={fetchReport} />
+      </div>
+      <p className="text-sm text-gray-500 mb-6">
+        {report ? `Generated ${new Date(report.generated_at).toLocaleString()}` : 'No report generated yet — run the finding eval to produce one.'}
+      </p>
+
+      {loading ? (
+        <div className="text-gray-500">Loading evaluation matrix...</div>
+      ) : error || !report ? (
         <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
           <AlertCircle className="w-5 h-5" />
           {error || 'No evaluation report available'}
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
-      <h1 className="text-2xl font-bold mb-1">Agent Evaluation Matrix</h1>
-      <p className="text-sm text-gray-500 mb-6">
-        Generated {new Date(report.generated_at).toLocaleString()}
-      </p>
-
+      ) : (
+        <>
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
@@ -159,8 +257,13 @@ export const EvalMatrixPage: React.FC = () => {
           </div>
         ))}
       </div>
+        </>
+      )}
 
-      <h1 className="text-2xl font-bold mb-1 mt-12">Fix Agent Model Comparison</h1>
+      <div className="flex items-start justify-between gap-4 mb-1 mt-12 flex-wrap">
+        <h1 className="text-2xl font-bold">Fix Agent Model Comparison</h1>
+        <EvalRunControl evalType="fix" label="Fix Eval" onCompleted={fetchFixReport} />
+      </div>
       <p className="text-sm text-gray-500 mb-6">
         LLM-as-judge scores (0-1) for each candidate generator model, judged against golden findings.
       </p>
@@ -235,7 +338,10 @@ export const EvalMatrixPage: React.FC = () => {
         </div>
       )}
 
-      <h1 className="text-2xl font-bold mb-1 mt-12">End-to-End Pipeline (Finding → Fix)</h1>
+      <div className="flex items-start justify-between gap-4 mb-1 mt-12 flex-wrap">
+        <h1 className="text-2xl font-bold">End-to-End Pipeline (Finding → Fix)</h1>
+        <EvalRunControl evalType="e2e" label="E2E Eval" onCompleted={fetchE2eReport} />
+      </div>
       <p className="text-sm text-gray-500 mb-6">
         Live finding-agent output matched against golden findings, then fed straight into the fix
         agent.

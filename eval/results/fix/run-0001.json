@@ -1,0 +1,120 @@
+{
+  "generated_at": "2026-07-23T14:57:53.583537Z",
+  "models": [
+    {
+      "model_label": "nav",
+      "cases": 6,
+      "success_rate": 1.0,
+      "syntax_valid_rate": 1.0,
+      "resolved_rate": 0.833,
+      "avg_correctness": 4.5,
+      "avg_safety": 4.667,
+      "avg_minimality": 5.0,
+      "avg_explanation_quality": 3.833,
+      "case_results": [
+        {
+          "model_label": "nav",
+          "file": "tests/test_data/app_vunerable.py",
+          "category": "security",
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 5.0,
+            "safety": 5.0,
+            "minimality": 5.0,
+            "explanation_quality": 4.0,
+            "regression_risk": "low",
+            "notes": "All vulnerabilities are addressed effectively without introducing new issues; explanation is mostly clear."
+          }
+        },
+        {
+          "model_label": "nav",
+          "file": "tests/test_data/profile.py",
+          "category": "security",
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 4.0,
+            "safety": 4.0,
+            "minimality": 5.0,
+            "explanation_quality": 4.0,
+            "regression_risk": "low",
+            "notes": "Fix correctly prevents SSRF by blocking private IPs, but could improve by validating URL format."
+          }
+        },
+        {
+          "model_label": "nav",
+          "file": "tests/test_data/app_vunerable-v1.py",
+          "category": "security",
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": false,
+            "correctness": 3.0,
+            "safety": 4.0,
+            "minimality": 5.0,
+            "explanation_quality": 2.0,
+            "regression_risk": "low",
+            "notes": "Hardcoded JWT secret remains; SSRF, IDOR, and JWT algorithm confusion fixed."
+          }
+        },
+        {
+          "model_label": "nav",
+          "file": "eval/golden/samples/bug_sample.py",
+          "category": "bug_detection",
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 5.0,
+            "safety": 5.0,
+            "minimality": 5.0,
+            "explanation_quality": 4.0,
+            "regression_risk": "low",
+            "notes": "All issues were correctly fixed with minimal changes and no new issues introduced."
+          }
+        },
+        {
+          "model_label": "nav",
+          "file": "eval/golden/samples/performance_sample.py",
+          "category": "performance",
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 5.0,
+            "safety": 5.0,
+            "minimality": 5.0,
+            "explanation_quality": 4.0,
+            "regression_risk": "none",
+            "notes": "All performance issues were correctly resolved with minimal changes and no new risks introduced."
+          }
+        },
+        {
+          "model_label": "nav",
+          "file": "eval/golden/samples/style_sample.py",
+          "category": "style",
+          "success": true,
+          "syntax_valid": true,
+          "error": null,
+          "judge": {
+            "resolved": true,
+            "correctness": 5.0,
+            "safety": 5.0,
+            "minimality": 5.0,
+            "explanation_quality": 5.0,
+            "regression_risk": "none",
+            "notes": "All style issues were correctly resolved without introducing new problems, and the explanation was clear and accurate."
+          }
+        }
+      ]
+    }
+  ]
+}

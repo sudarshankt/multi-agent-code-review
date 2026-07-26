@@ -51,12 +51,19 @@ class Settings(BaseSettings):
     primary_model: str = "deepseek-v4-pro"
     fallback_model: str = "deepseek-v4-pro"
     llm_base_url: str | None = None
-    model_provider: str = "deepseek"  # "anthropic" | "deepseek"
+    model_provider: str = "deepseek"  # "anthropic" | "deepseek" | "nav"
     llm_api_key: str | None = None
     llm_max_tokens: int = 4096
     llm_requests_per_second: float = 200.0
     llm_timeout_seconds: float = 120.0
     ssl_cert_file: str | None = None
+    # ---- nav gateway (model_provider="nav") ----
+    llm_project_name: str = "cap-pr-review"
+    llm_verify_ssl: bool = True
+
+    # ---- llm-as-judge overrides (eval/fix_eval/run_eval.py); blank = reuse primary settings ----
+    judge_model_provider: str | None = None
+    judge_primary_model: str | None = None
 
     # ---- github ----
     github_token: str | None = None
@@ -75,6 +82,7 @@ class Settings(BaseSettings):
     chromadb_port: int = 8001
     chromadb_persist_dir: str = ".chroma"
     chromadb_collection: str = "owasp_knowledge"
+    chromadb_embedding_model_path: str = "./sentence-transformers/all-MiniLM-L6-v2"
 
     # ---- langfuse ----
     langfuse_enabled: bool = False
@@ -132,6 +140,8 @@ class Settings(BaseSettings):
             requests_per_second=self.llm_requests_per_second,
             timeout=self.llm_timeout_seconds,
             ssl_cert_file=self.ssl_cert_file or None,
+            project_name=self.llm_project_name,
+            verify_ssl=self.llm_verify_ssl,
         )
 
     @cached_property
@@ -160,6 +170,7 @@ class Settings(BaseSettings):
             port=self.chromadb_port,
             persist_dir=self.chromadb_persist_dir,
             collection=self.chromadb_collection,
+            embedding_model_path=self.chromadb_embedding_model_path,
         )
 
     @cached_property

@@ -1,0 +1,84 @@
+{
+  "generated_at": "2026-07-24T15:28:28.513583Z",
+  "agents": [
+    {
+      "agent_name": "bug_detection",
+      "true_positives": 5,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "avg_similarity": 0.604,
+      "cases": [
+        {
+          "file": "eval/golden/samples/bug_sample.py",
+          "matched": [
+            {
+              "expected": {
+                "description": "IndexError when items is empty in get_first_item",
+                "start_line": 6,
+                "end_line": 6,
+                "severity": "medium"
+              },
+              "actual_title": "IndexError when accessing first item of empty list",
+              "actual_description": "The function get_first_item does not handle the case when the input list is empty, leading to an IndexError when attempting to access the first element.",
+              "actual_start_line": 7,
+              "similarity": 0.801
+            },
+            {
+              "expected": {
+                "description": "ZeroDivisionError when values is empty in average",
+                "start_line": 12,
+                "end_line": 12,
+                "severity": "medium"
+              },
+              "actual_title": "ZeroDivisionError when calculating average of empty list",
+              "actual_description": "The function average does not handle the case when the input list is empty, leading to a ZeroDivisionError when attempting to divide by zero.",
+              "actual_start_line": 12,
+              "similarity": 0.824
+            },
+            {
+              "expected": {
+                "description": "Mutable default argument bucket=[] shared across calls",
+                "start_line": 16,
+                "end_line": 18,
+                "severity": "medium"
+              },
+              "actual_title": "Mutable default argument",
+              "actual_description": "Function 'append_to_list' uses a mutable default argument, which is shared across calls.",
+              "actual_start_line": 15,
+              "similarity": 0.403
+            },
+            {
+              "expected": {
+                "description": "Bare except swallows all exceptions including unrelated errors",
+                "start_line": 24,
+                "end_line": 26,
+                "severity": "medium"
+              },
+              "actual_title": "Silently swallowed exception",
+              "actual_description": "Exception handler body is just 'pass', hiding failures.",
+              "actual_start_line": 25,
+              "similarity": 0.536
+            },
+            {
+              "expected": {
+                "description": "Uses `is` for string value comparison instead of `==`",
+                "start_line": 31,
+                "end_line": 31,
+                "severity": "low"
+              },
+              "actual_title": "Incorrect comparison using 'is' instead of '=='",
+              "actual_description": "The function get_user_role uses 'is' for string comparison, which is incorrect for value comparison and can lead to unexpected behavior.",
+              "actual_start_line": 29,
+              "similarity": 0.457
+            }
+          ],
+          "missed": [],
+          "unexpected": []
+        }
+      ]
+    }
+  ]
+}

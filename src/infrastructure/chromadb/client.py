@@ -21,22 +21,28 @@ def _init_client():
     mode = chromadb_config.mode.lower()
 
     try:
-        if mode == "http":
-            import chromadb
+        import chromadb
+        from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
+        if mode == "http":
             _client = chromadb.HttpClient(
                 host=chromadb_config.host,
                 port=chromadb_config.port,
             )
         else:  # embedded (default)
-            import chromadb
-
             _client = chromadb.PersistentClient(
                 path=chromadb_config.persist_dir,
             )
+
+        # Loads from a local model directory (no network call) so embedding
+        # works on networks that block huggingface.co / S3 model downloads.
+        embedding_function = SentenceTransformerEmbeddingFunction(
+            model_name=chromadb_config.embedding_model_path,
+        )
         _collection = _client.get_or_create_collection(
             name=chromadb_config.collection,
             metadata={"hnsw:space": "cosine"},
+            embedding_function=embedding_function,
         )
         logger.info("chromadb_initialized", mode=mode)
     except ImportError:

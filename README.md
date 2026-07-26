@@ -217,6 +217,16 @@ make run    # Start API (foreground)
 npm run dev # Start dashboard (from dashboard/)
 ```
 
+### Run Evals
+```bash
+python -m eval.finding_eval.run_eval  # finding agents: precision/recall/F1
+python -m eval.fix_eval.run_eval      # fix agent: LLM-as-judge across model candidates
+python -m eval.e2e_eval.run_eval      # finding -> fix, chained end-to-end
+```
+See [eval/README.md](eval/README.md) for the concepts, matching logic, and
+metrics behind each stage. Results are viewable in the dashboard's Eval
+Matrix page once generated.
+
 ## Architecture Highlights
 
 ### LangGraph Orchestrator Topology

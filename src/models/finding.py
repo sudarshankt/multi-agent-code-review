@@ -74,6 +74,7 @@ class FixResult(BaseModel):
     file_path: str
     original_code: str | None = None
     fixed_code: str | None = None
+    explanation: str | None = None
     commit_sha: str | None = None
     commit_message: str | None = None
     success: bool = False

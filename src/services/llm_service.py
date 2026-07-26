@@ -118,12 +118,13 @@ def _extract_json(text: str) -> Any:
 
 
 class LLMService:
-    """Thin async wrapper around ChatAnthropic."""
+    """Thin async wrapper around ChatAnthropic (or the NAV LLM gateway)."""
 
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
         _configure_ssl_env(self.settings.llm.ssl_cert_file)
         self._model = None  # lazy
+        self._http = None  # lazy httpx client for the nav gateway
 
     def _build_model(self):
         from langchain_anthropic import ChatAnthropic
@@ -152,8 +153,66 @@ class LLMService:
             self._model = self._build_model()
         return self._model
 
+    def _nav_client(self):
+        import httpx
+
+        if self._http is None:
+            llm = self.settings.llm
+            self._http = httpx.AsyncClient(
+                timeout=llm.timeout,
+                verify=llm.ssl_cert_file or llm.verify_ssl,
+            )
+        return self._http
+
+    async def _complete_nav(self, prompt: str, system: str | None) -> str:
+        """Call the NAV internal LLM gateway (custom request/response schema)."""
+        llm = self.settings.llm
+        if not llm.base_url:
+            raise LLMError("LLM_BASE_URL must be set for the 'nav' provider")
+
+        messages: list[dict[str, str]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        payload = {
+            "config": {"model_name": llm.primary_model},
+            "messages": messages,
+            "project_name": llm.project_name,
+        }
+        headers = {
+            "accept": "application/json",
+            "X-API-KEY": llm.api_key or "",
+            "Content-Type": "application/json",
+        }
+        try:
+            response = await self._nav_client().post(
+                llm.base_url, headers=headers, json=payload
+            )
+            response.raise_for_status()
+            data = response.json()["data"]
+            result = data["result"]
+            usage = result.get("usage") or {}
+            logger.info(
+                "nav_llm_completion",
+                request_id=data.get("request_id"),
+                model=result.get("model"),
+                latency=data.get("latency"),
+                prompt_tokens=usage.get("prompt_tokens"),
+                completion_tokens=usage.get("completion_tokens"),
+                total_tokens=usage.get("total_tokens"),
+            )
+            return result["choices"][0]["message"]["content"]
+        except LLMError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - normalise to domain error
+            raise LLMError(f"NAV LLM gateway call failed: {exc}", detail=exc) from exc
+
     async def complete(self, prompt: str, *, system: str | None = None) -> str:
         """Return the raw text content of a single completion."""
+        if self.settings.llm.provider == "nav":
+            return await self._complete_nav(prompt, system)
+
         messages: list[tuple[str, str]] = []
         if system:
             messages.append(("system", system))

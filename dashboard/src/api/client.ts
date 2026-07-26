@@ -176,10 +176,48 @@ export interface E2EReport {
   agents: PipelineMetrics[]
 }
 
+export type EvalType = 'finding' | 'fix' | 'e2e'
+
+export type EvalRunState = 'idle' | 'running' | 'completed' | 'failed'
+
+export interface EvalRunStatus {
+  eval_type: EvalType
+  status: EvalRunState
+  started_at: number | null
+  finished_at: number | null
+  error: string | null
+  log_tail: string
+}
+
+export interface EvalOptions {
+  agents: string[]
+  fix: string[]
+}
+
 export const evalAPI = {
   getLatest: () => api.get<EvalReport>('/eval/latest'),
   getLatestFix: () => api.get<FixEvalReport>('/eval/latest-fix'),
   getLatestE2E: () => api.get<E2EReport>('/eval/latest-e2e'),
+  getOptions: () => api.get<EvalOptions>('/eval/options'),
+  triggerRun: (evalType: EvalType, filter: string[] = []) =>
+    api.post<{ eval_type: EvalType; status: string; filter: string[] }>(
+      `/eval/run/${evalType}`,
+      { filter }
+    ),
+  getRunStatus: (evalType: EvalType) =>
+    api.get<EvalRunStatus>(`/eval/run/${evalType}/status`),
+  downloadLatest: async (evalType: EvalType, filename: string) => {
+    const path = evalType === 'finding' ? '/eval/latest' : `/eval/latest-${evalType}`
+    const res = await api.get(path, { responseType: 'blob' })
+    const url = URL.createObjectURL(res.data as Blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  },
 }
 
 export const reviewAPI = {
@@ -192,7 +230,7 @@ export const reviewAPI = {
   listReviews: (page = 1, pageSize = 10) =>
     api.get<{ items: Review[]; total: number; page: number; page_size: number }>(
       '/reviews',
-      { params: { page, page_size } }
+      { params: { page, page_size: pageSize } }
     ),
 }
 

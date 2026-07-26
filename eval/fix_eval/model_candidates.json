@@ -1,3 +1,4 @@
 [
-  {"label": "nav", "model_provider": "nav", "primary_model": "gpt-4o"}
+  {"label": "nav", "model_provider": "nav", "primary_model": "gpt-4o"},
+  {"label": "deepseek", "model_provider": "deepseek", "primary_model": "deepseek-v4-pro"}
 ]

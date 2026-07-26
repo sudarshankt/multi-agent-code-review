@@ -33,7 +33,10 @@ from pathlib import Path
 from eval.common import REPO_ROOT, load_config
 
 REPO_URL = "https://github.com/bytedance/PatchEval.git"
-DATA_REL_PATH = "patcheval/datasets/input.json"
+DATA_REL_PATHS = (
+    "patcheval/datasets/input.json",             # older/public metadata file
+    "patcheval/datasets/patcheval_verified.json",  # current upstream file
+)
 
 
 def download(dest: Path | None = None) -> Path:
@@ -56,16 +59,24 @@ def download(dest: Path | None = None) -> Path:
 def load_python_subset(sample_n: int | None = None, dest: Path | None = None) -> list[dict]:
     cfg = load_config()
     dest = dest or REPO_ROOT / cfg["paths"]["dataset_dir"] / "patcheval"
-    data_file = dest / DATA_REL_PATH
-    if not data_file.exists():
+    data_file = next((dest / p for p in DATA_REL_PATHS if (dest / p).exists()), None)
+    if data_file is None:
         raise FileNotFoundError(
-            f"{data_file} not found. Run `python -m eval.datasets.download_patcheval` first."
+            "No supported PatchEval dataset file found under "
+            f"{dest / 'patcheval/datasets'} (looked for: {', '.join(DATA_REL_PATHS)}). "
+            "Run `python -m eval.datasets.download_patcheval` first."
         )
 
     with open(data_file) as f:
         data = json.load(f)
 
-    python_entries = [d for d in data if d.get("programming_language") == "Python"]
+    # PatchEval schema uses either `programming_language` (older) or
+    # `programing_language` (current verified dataset; typo kept upstream).
+    python_entries = [
+        d
+        for d in data
+        if (d.get("programming_language") or d.get("programing_language")) == "Python"
+    ]
     n = sample_n if sample_n is not None else cfg["sample_sizes"].get("patcheval_python_n")
     if n is not None and n < len(python_entries):
         python_entries = python_entries[:n]

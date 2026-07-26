@@ -37,6 +37,7 @@ class ApplyFixesResponse(BaseModel):
     committed: int
     failed: int
     commit_shas: dict[str, str]  # {category: sha}
+    baseline_pr_url: str | None = None
 
 
 class RunTestsRequest(BaseModel):
@@ -121,14 +122,18 @@ async def apply_approved_fixes(review_id: str) -> ApplyFixesResponse:
 
     pr = review.pr_info
     branch = pr.head_branch or "main"
+    base_branch = pr.base_branch or "main"
 
     from src.agents.fix.agent import FixAgent
     from src.services.git_service import GitService
+    from src.services.github_service import GitHubService
 
     commit_shas: dict[str, str] = {}
     committed = 0
     failed = 0
+    baseline_pr_url: str | None = None
 
+    # 1. Commit approved fixes to the original source branch (current behavior).
     async with GitService() as git:
         agent = FixAgent(git=git)
         await agent.commit_approved(approved, pr.owner, pr.repo, branch)
@@ -145,6 +150,45 @@ async def apply_approved_fixes(review_id: str) -> ApplyFixesResponse:
     if committed > 0 and review.pr_info.html_url:
         review.fix_pr_url = review.pr_info.html_url
 
+    # 2. Create a baseline PR from the snapshot branch (pre-fix code) to the
+    #    same destination branch.  This lets reviewers compare the original
+    #    code against the fixed version side-by-side.
+    if committed > 0 and review.snapshot_branch:
+        try:
+            async with GitHubService() as gh:
+                baseline_title = f"[Baseline] Original code for PR #{pr.pr_number} — {pr.title or 'review'}"
+                baseline_body = (
+                    f"## Baseline (Pre-Fix) Reference\n\n"
+                    f"This PR preserves the original code from `{branch}` "
+                    f"before AI-generated fixes were applied in "
+                    f"[{pr.title or f'PR #{pr.pr_number}'}]({pr.html_url or ''}).\n\n"
+                    f"**Review ID:** `{review_id}`\n"
+                    f"**Snapshot Branch:** `{review.snapshot_branch}`\n\n"
+                    f"Use this PR to compare the before/after of the AI fixes.\n\n"
+                    f"---\n"
+                    f"🤖 Generated with [Cap PR Review](https://github.com/Agentic-Code-Reviewers)"
+                )
+                pr_data = await gh.create_pr(
+                    pr.owner, pr.repo,
+                    baseline_title,
+                    review.snapshot_branch,
+                    base_branch,
+                    baseline_body,
+                )
+                baseline_pr_url = pr_data.get("html_url", "")
+                review.baseline_pr_url = baseline_pr_url
+                logger.info(
+                    "baseline_pr_created",
+                    review_id=review_id,
+                    baseline_pr_url=baseline_pr_url,
+                )
+        except Exception as exc:
+            logger.warning(
+                "baseline_pr_creation_failed",
+                review_id=review_id,
+                error=str(exc),
+            )
+
     from src.api.endpoints.sse import publish_event
     await publish_event(
         review_id,
@@ -153,11 +197,23 @@ async def apply_approved_fixes(review_id: str) -> ApplyFixesResponse:
             "committed_count": committed,
             "failed_count": failed,
             "commit_shas": commit_shas,
+            "baseline_pr_url": baseline_pr_url,
         },
     )
 
-    logger.info("fixes_applied", review_id=review_id, committed=committed, failed=failed)
-    return ApplyFixesResponse(committed=committed, failed=failed, commit_shas=commit_shas)
+    logger.info(
+        "fixes_applied",
+        review_id=review_id,
+        committed=committed,
+        failed=failed,
+        baseline_pr_url=baseline_pr_url,
+    )
+    return ApplyFixesResponse(
+        committed=committed,
+        failed=failed,
+        commit_shas=commit_shas,
+        baseline_pr_url=baseline_pr_url,
+    )
 
 
 # ---------------------------------------------------------------------------

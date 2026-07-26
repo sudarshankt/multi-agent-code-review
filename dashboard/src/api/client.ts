@@ -40,6 +40,7 @@ export interface Finding {
 export interface ReviewDetail extends Review {
   findings_by_category: Record<string, Finding[]>
   fix_pr_url?: string
+  baseline_pr_url?: string
   proposed_fixes?: ProposedFix[]
   test_run?: TestRunSummary
 }
@@ -93,7 +94,7 @@ export const fixesAPI = {
     api.patch<{ fix_id: string; status: string }>(`/reviews/${reviewId}/fixes/${fixId}`, { action }),
 
   applyApprovedFixes: (reviewId: string) =>
-    api.post<{ committed: number; failed: number; commit_shas: Record<string, string> }>(
+    api.post<{ committed: number; failed: number; commit_shas: Record<string, string>; baseline_pr_url?: string }>(
       `/reviews/${reviewId}/fixes/apply`
     ),
 

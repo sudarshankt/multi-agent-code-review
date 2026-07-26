@@ -58,15 +58,20 @@ class BaseAnalysisAgent(ABC):
         triage_enabled = bool(base_context.get("triage_enabled"))
 
         async def process_file(file_path: str, code: str) -> list[Finding]:
+            file_started = time.monotonic()
             if not self._supported(file_path):
                 return []
 
+            sem_wait_started = time.monotonic()
             async with semaphore:
+                sem_wait = time.monotonic() - sem_wait_started
                 try:
                     file_context = dict(base_context)
 
                     if triage_enabled:
+                        triage_started = time.monotonic()
                         triage_alerts = await self._static_triage(code, file_path, file_context)
+                        triage_duration = time.monotonic() - triage_started
 
                         if triage_alerts is not None and len(triage_alerts) == 0:
                             files_bypassed = int(base_context.get("files_bypassed", 0)) + 1
@@ -79,14 +84,18 @@ class BaseAnalysisAgent(ABC):
                                 file=file_path,
                                 alerts=0,
                                 files_bypassed=files_bypassed,
+                                triage_duration_seconds=round(triage_duration, 3),
                             )
                             return []
 
                         file_context["triage_alerts"] = triage_alerts or []
                     else:
+                        triage_duration = 0.0
                         file_context["triage_alerts"] = []
 
+                    analyze_started = time.monotonic()
                     file_findings = await self.analyze(code, file_path, file_context)
+                    analyze_duration = time.monotonic() - analyze_started
 
                 except Exception as exc:  # noqa: BLE001 - one bad file must not halt the agent
                     logger.warning(
@@ -94,8 +103,21 @@ class BaseAnalysisAgent(ABC):
                         agent_name=self.name,
                         file=file_path,
                         error=str(exc),
+                        duration_seconds=round(time.monotonic() - file_started, 3),
                     )
                     return []
+
+            total_file_duration = time.monotonic() - file_started
+            logger.info(
+                "agent_file_processed",
+                agent_name=self.name,
+                file=file_path,
+                findings=len(file_findings),
+                sem_wait_seconds=round(sem_wait, 3),
+                triage_seconds=round(triage_duration, 3),
+                analyze_seconds=round(analyze_duration, 3),
+                total_seconds=round(total_file_duration, 3),
+            )
 
             for finding in file_findings:
                 finding.agent_name = self.name

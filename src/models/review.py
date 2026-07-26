@@ -65,6 +65,8 @@ class Review(BaseModel):
     total_fixes: int = 0
     fix_branch: str | None = None
     fix_pr_url: str | None = None
+    snapshot_branch: str | None = None
+    baseline_pr_url: str | None = None
     triggered_by: str | None = None
     error_message: str | None = None
     proposed_fixes: list[ProposedFix] = Field(default_factory=list)

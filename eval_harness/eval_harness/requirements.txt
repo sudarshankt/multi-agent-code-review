@@ -2,6 +2,10 @@
 pyyaml>=6.0
 anthropic>=0.25.0
 
+# Install the root project in editable mode so `src.*` agents and their
+# dependencies (langgraph, structlog, etc.) are available to this harness.
+-e ../..
+
 # Metrics / RAG eval
 ragas>=0.1.9
 datasets>=2.19.0

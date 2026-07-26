@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from src.core.config import get_settings
 from src.core.logging import get_logger
 
@@ -9,6 +11,25 @@ logger = get_logger(__name__)
 
 _client = None
 _collection = None
+
+
+def _resolve_embedding_model(model_name: str) -> str:
+    """Resolve local model paths and sanitize model ids for SentenceTransformers."""
+    raw = (model_name or "").strip()
+    if not raw:
+        return "sentence-transformers/all-MiniLM-L6-v2"
+
+    path_candidate = Path(raw)
+    if path_candidate.exists():
+        return str(path_candidate.resolve())
+
+    # `./foo` is rejected by HF repo-id validation when no local directory exists.
+    if raw.startswith("./"):
+        normalized = raw[2:]
+        logger.warning("chromadb_embedding_model_normalized", original=raw, normalized=normalized)
+        return normalized
+
+    return raw
 
 
 def _init_client():
@@ -19,6 +40,7 @@ def _init_client():
     settings = get_settings()
     chromadb_config = settings.chromadb
     mode = chromadb_config.mode.lower()
+    repo_root = Path(__file__).resolve().parents[3]
 
     try:
         import chromadb
@@ -30,14 +52,17 @@ def _init_client():
                 port=chromadb_config.port,
             )
         else:  # embedded (default)
+            persist_dir = Path(chromadb_config.persist_dir)
+            if not persist_dir.is_absolute():
+                persist_dir = repo_root / persist_dir
             _client = chromadb.PersistentClient(
-                path=chromadb_config.persist_dir,
+                path=str(persist_dir),
             )
 
         # Loads from a local model directory (no network call) so embedding
         # works on networks that block huggingface.co / S3 model downloads.
         embedding_function = SentenceTransformerEmbeddingFunction(
-            model_name=chromadb_config.embedding_model_path,
+            model_name=_resolve_embedding_model(chromadb_config.embedding_model_path),
         )
         _collection = _client.get_or_create_collection(
             name=chromadb_config.collection,
@@ -46,7 +71,7 @@ def _init_client():
         )
         logger.info("chromadb_initialized", mode=mode)
     except ImportError:
-        logger.warning("chromadb_not_installed", hint="Install with: pip install -e '.[rag]'")
+        logger.warning("chromadb_not_installed", hint="Install with: pip install chromadb sentence-transformers")
         _client = None
         _collection = None
     except Exception as exc:

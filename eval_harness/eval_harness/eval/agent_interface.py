@@ -18,90 +18,346 @@ without the app running.
 """
 from __future__ import annotations
 
-import hashlib
+import asyncio
 import logging
+import os
+import re
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-def _fake_binary_prediction(seed_text: str) -> int:
-    """Deterministic pseudo-random 0/1 based on a hash — NOT a real model,
-    just enough to exercise the metrics pipeline before the real agent is
-    wired in."""
-    h = int(hashlib.sha256(seed_text.encode()).hexdigest(), 16)
-    return h % 2
+def _ensure_repo_root_on_path() -> None:
+    """Allow eval_harness to import project `src.*` regardless of cwd.
+
+    When users launch from `eval_harness/eval_harness`, Python won't find
+    the project root by default. We locate it relative to this file and
+    prepend it to sys.path.
+    """
+    repo_root = Path(__file__).resolve().parents[3]
+    repo_root_str = str(repo_root)
+    if repo_root_str not in sys.path:
+        sys.path.insert(0, repo_root_str)
+
+
+def _is_lenient_mode() -> bool:
+    """Optional compatibility mode.
+
+    Default is strict integration (raise on missing app deps). Set
+    EVAL_HARNESS_LENIENT=1 to return safe empty outputs instead.
+    """
+    return os.getenv("EVAL_HARNESS_LENIENT", "0").lower() in {"1", "true", "yes"}
+
+
+def _handle_integration_error(func_name: str, exc: Exception, default: Any) -> Any:
+    logger.warning("%s_failed", func_name, exc_info=exc)
+    if _is_lenient_mode():
+        return default
+    raise RuntimeError(
+        f"{func_name} requires full app dependencies. Install root project deps first "
+        f"(from repo root: pip install -e .) or run with EVAL_HARNESS_LENIENT=1. "
+        f"Original error: {exc}"
+    ) from exc
+
+
+def _run_coro_sync(coro: Any) -> Any:
+    """Run an async coroutine from sync contexts (CLI + Streamlit safe)."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(lambda: asyncio.run(coro))
+        return future.result()
+
+
+def _files_payload_from_code(code: str, file_path: str = "eval_input.py") -> dict[str, str]:
+    return {file_path: code or ""}
+
+
+def _extract_files_from_unified_diff(pr_diff: str) -> tuple[dict[str, str], dict[str, str]]:
+    """Best-effort extraction of per-file text from unified diffs.
+
+    We keep added and context lines as synthetic file content so agents can run
+    without a full repository checkout.
+    """
+    files: dict[str, list[str]] = {}
+    diffs: dict[str, list[str]] = {}
+    current_file: str | None = None
+
+    for raw_line in pr_diff.splitlines():
+        line = raw_line.rstrip("\n")
+
+        if line.startswith("+++ b/"):
+            current_file = line[6:]
+            files.setdefault(current_file, [])
+            diffs.setdefault(current_file, [])
+            continue
+
+        if current_file is None:
+            continue
+
+        diffs[current_file].append(line)
+
+        if line.startswith("@@") or line.startswith("diff --git") or line.startswith("index ") or line.startswith("--- a/"):
+            continue
+        if line.startswith("+") and not line.startswith("+++"):
+            files[current_file].append(line[1:])
+        elif line.startswith(" "):
+            files[current_file].append(line[1:])
+        elif line.startswith("-") and not line.startswith("---"):
+            # Removed lines are not part of the resulting file state.
+            continue
+        else:
+            # PR-shaped cases from the harness often provide `---/+++` headers
+            # followed by raw file content (not +/- hunk lines).
+            files[current_file].append(line)
+
+    normalized_files = {
+        fp: "\n".join(lines).strip() for fp, lines in files.items() if "\n".join(lines).strip()
+    }
+    normalized_diffs = {fp: "\n".join(lines) for fp, lines in diffs.items() if lines}
+    return normalized_files, normalized_diffs
+
+
+def _category_key(category_value: str) -> str:
+    return {
+        "security": "security_issues",
+        "bug_detection": "bugs",
+        "style": "style_violations",
+        "performance": "performance_issues",
+    }.get(category_value, "bugs")
+
+
+def _finding_to_dict(finding: Any) -> dict[str, Any]:
+    category = getattr(finding, "category", None)
+    severity = getattr(finding, "severity", None)
+    location = getattr(finding, "location", None)
+
+    return {
+        "id": getattr(finding, "id", ""),
+        "category": getattr(category, "value", str(category or "")),
+        "severity": getattr(severity, "value", str(severity or "")),
+        "title": getattr(finding, "title", ""),
+        "description": getattr(finding, "description", ""),
+        "file_path": getattr(location, "file_path", ""),
+        "start_line": getattr(location, "start_line", None),
+        "end_line": getattr(location, "end_line", None),
+        "suggestion": getattr(finding, "suggestion", None),
+        "cwe_id": getattr(finding, "cwe_id", None),
+        "agent_name": getattr(finding, "agent_name", None),
+    }
 
 
 def predict_vulnerability(code: str) -> int:
-    """TODO: replace with a call to the Security Agent.
-    Return 1 if the agent flags `code` as vulnerable, else 0.
+    """Run the real SecurityAgent when available.
 
-    Example real implementation:
-        from app.agents.security_agent import security_agent_node
-        result = security_agent_node({"source_code": code})
-        return 1 if result["security_issues"] else 0
+    Returns 1 if findings are produced, else 0. Falls back to deterministic
+    pseudo predictions when app dependencies are unavailable.
     """
-    return _fake_binary_prediction(code)
+    try:
+        _ensure_repo_root_on_path()
+        from src.agents.security.agent import SecurityAgent
+
+        files = _files_payload_from_code(code)
+        findings = _run_coro_sync(SecurityAgent().run(files, {"triage_enabled": True}))
+        return 1 if findings else 0
+    except Exception as exc:
+        return _handle_integration_error("predict_vulnerability", exc, 0)
 
 
 def predict_bug(code: str, repo_context: str | None = None) -> int:
-    """TODO: replace with a call to the Bug Detection Agent.
-    Return 1 if the agent flags `code` (with optional repo_context) as buggy.
+    """Run the real BugDetectionAgent when available.
+
+    Returns 1 if findings are produced, else 0. Falls back to deterministic
+    pseudo predictions when app dependencies are unavailable.
     """
-    return _fake_binary_prediction((repo_context or "") + code)
+    try:
+        _ensure_repo_root_on_path()
+        from src.agents.bug_detection.agent import BugDetectionAgent
+
+        files = _files_payload_from_code(code)
+        context = {"triage_enabled": True, "repo_context": repo_context or ""}
+        findings = _run_coro_sync(BugDetectionAgent().run(files, context))
+        return 1 if findings else 0
+    except Exception as exc:
+        return _handle_integration_error("predict_bug", exc, 0)
 
 
 def generate_patch(vulnerable_code: str, description: str) -> str:
-    """TODO: replace with a call to the Patch Generation Agent.
-    Return the patched code (or a unified diff string, matching whatever
-    the Patch Agent's PatchOutput schema produces).
+    """Run FixAgent._fix_file with a synthetic finding derived from description.
+
+    Returns patched code on success, otherwise returns the original input.
     """
-    return vulnerable_code  # no-op stub: "patch" that changes nothing
+    try:
+        _ensure_repo_root_on_path()
+        from src.agents.fix.agent import FixAgent
+        from src.models.finding import Category, Confidence, Finding, Location, Severity
+
+        category = Category.SECURITY if re.search(r"\b(cwe|cve|vuln|injection|xss|sql)\b", description, re.IGNORECASE) else Category.BUG
+        seed_finding = Finding(
+            category=category,
+            severity=Severity.HIGH,
+            confidence=Confidence.MEDIUM,
+            title=(description or "Issue identified")[:200],
+            description=description or "Issue identified",
+            location=Location(file_path="eval_input.py", start_line=1, end_line=1),
+        )
+
+        async def _generate() -> str:
+            agent = FixAgent()
+            result, fixed_code = await agent._fix_file(
+                vulnerable_code,
+                "eval_input.py",
+                [seed_finding],
+                category.value,
+            )
+            if result.success and fixed_code:
+                return fixed_code
+            return vulnerable_code
+
+        return _run_coro_sync(_generate())
+    except Exception as exc:
+        return _handle_integration_error("generate_patch", exc, vulnerable_code)
 
 
 def style_flags(code: str) -> set[tuple]:
-    """TODO: replace with a call to the Style Agent.
-    Return a set of (line_number, rule_id) flags, matching Pylint's own
-    flag format so pep8_agreement() can compare them directly.
+    """Run the real StyleAgent and normalize findings to (line, rule_id).
+
+    Rule IDs are parsed from titles like ``E302: ...`` and default to
+    ``AGENT`` when no linter-like code is present.
     """
-    return set()
+    try:
+        _ensure_repo_root_on_path()
+        from src.agents.style.agent import StyleAgent
+
+        files = _files_payload_from_code(code)
+        findings = _run_coro_sync(StyleAgent().run(files, {"triage_enabled": True}))
+        flags: set[tuple] = set()
+        for finding in findings:
+            line = finding.location.start_line or 1
+            title = finding.title or ""
+            rule_match = re.match(r"^([A-Z]\d{3,4})\s*:", title)
+            rule_id = rule_match.group(1) if rule_match else "AGENT"
+            flags.add((line, rule_id))
+        return flags
+    except Exception as exc:
+        return _handle_integration_error("style_flags", exc, set())
 
 
 def rag_answer_with_context(question: str) -> tuple[str, list[str]]:
-    """TODO: replace with a call to the RAG pipeline.
-    Return (answer_text, retrieved_context_chunks).
+    """Retrieve OWASP/CWE context and synthesize an answer with the app LLM.
+
+    Returns (answer, chunks). If generation fails, returns empty answer with
+    empty chunks.
     """
-    return ("", [])
+    try:
+        _ensure_repo_root_on_path()
+        from src.agents.security.retriever import SecurityRetriever
+        from src.services.llm_service import get_llm_service
+
+        retriever = SecurityRetriever(top_k=5)
+        context_block = retriever.retrieve(question)
+        chunks = [ln.strip().lstrip("- ").strip() for ln in context_block.splitlines() if ln.strip()]
+
+        if not chunks:
+            return ("", [])
+
+        prompt = (
+            "Answer the security question using only the provided context. "
+            "If the context is insufficient, say so briefly.\n\n"
+            f"Question: {question}\n\n"
+            "Context:\n"
+            f"{context_block}\n"
+        )
+
+        answer = _run_coro_sync(get_llm_service().complete(prompt))
+        return (answer or "", chunks)
+    except Exception as exc:
+        return _handle_integration_error("rag_answer_with_context", exc, ("", []))
 
 
 def run_full_pipeline(pr_diff: str) -> dict:
-    """TODO: replace with a call to the FULL LangGraph pipeline (supervisor
-    + all agents), not an individual agent function. This is the plug
-    point for eval/e2e/ — end-to-end PR review quality evaluation, as
-    opposed to eval/runners/ which score individual agents in isolation.
+    """Run the real orchestrator graph on best-effort file extraction.
 
-    Must return the same structured "final report" object your app
-    actually produces for a PR, e.g. matching your FinalReport Pydantic
-    model:
-        {
-          "security_issues": [...],
-          "bugs": [...],
-          "style_violations": [...],
-          "patches": [...],
-          "test_cases": [...],
+    Unified diff input is converted into synthetic per-file contents so the
+    production graph can run without a repository checkout. Returns a stable
+    final-report shape expected by eval/e2e.
+    """
+    files, diffs = _extract_files_from_unified_diff(pr_diff)
+    if not files:
+        files = _files_payload_from_code(pr_diff, file_path="pr_diff.txt")
+
+    try:
+        _ensure_repo_root_on_path()
+        from src.agents.orchestrator.graph import get_graph
+        from src.models.review import PRInfo, ReviewStatus
+
+        input_state = {
+            "pr_info": PRInfo(owner="eval", repo="eval_harness", pr_number=0, title="eval_harness_case"),
+            "files": files,
+            "diffs": diffs,
+            "review_id": "eval-harness",
+            "status": ReviewStatus.ANALYZING,
+            "findings": [],
+            "agent_results": {},
+            "fix_results": [],
+            "proposed_fixes": [],
+            "errors": [],
+            "files_bypassed": 0,
         }
 
-    Example real implementation:
-        from app.graph import compiled_graph
-        result = compiled_graph.invoke({"source_code": pr_diff})
-        return result["final_report"]
-    """
-    return {
+        result = _run_coro_sync(get_graph().ainvoke(input_state))
+    except Exception as exc:
+        return _handle_integration_error(
+            "run_full_pipeline",
+            exc,
+            {
+                "security_issues": [],
+                "bugs": [],
+                "style_violations": [],
+                "performance_issues": [],
+                "patches": [],
+                "test_cases": [],
+                "errors": [str(exc)],
+            },
+        )
+
+    findings = result.get("findings", [])
+    grouped: dict[str, list[dict[str, Any]]] = {
         "security_issues": [],
         "bugs": [],
         "style_violations": [],
-        "patches": [],
+        "performance_issues": [],
+    }
+    for finding in findings:
+        category = getattr(finding, "category", None)
+        category_value = getattr(category, "value", str(category or "bug_detection"))
+        grouped[_category_key(category_value)].append(_finding_to_dict(finding))
+
+    proposals = result.get("proposed_fixes", [])
+    patches = [
+        {
+            "id": p.id,
+            "category": p.category,
+            "file_path": p.file_path,
+            "diff": p.diff,
+            "explanation": p.explanation,
+            "status": p.status.value,
+        }
+        for p in proposals
+    ]
+
+    return {
+        **grouped,
+        "patches": patches,
         "test_cases": [],
+        "files_bypassed": result.get("files_bypassed", 0),
+        "errors": result.get("errors", []),
     }
 
 

@@ -445,8 +445,17 @@ class TestRunner:
         test_dir = os.path.join(clone_dir, "tests")
         target = test_dir if os.path.isdir(test_dir) else clone_dir
 
-        cmd = [python_exe, "-m", "pytest", "--tb=short", "-q", "--no-header", target]
-        logger.info("test_runner_cmd", cmd=cmd, clone_dir=clone_dir, target=target)
+        # Only run tests from src/tests/ — no other directory, no fallback.
+        test_dir = os.path.join(clone_dir, "src", "tests")
+        if not os.path.isdir(test_dir):
+            logger.info("no_src_tests_directory", clone_dir=clone_dir)
+            return TestRunResult(
+                passed=True, exit_code=0, skipped=True,
+                skip_reason="no src/tests directory found — nothing to run",
+            )
+
+        cmd = [python_exe, "-m", "pytest", "--tb=short", "-q", "--no-header", "src/tests"]
+        logger.info("test_runner_cmd", cmd=cmd, clone_dir=clone_dir)
 
         try:
             proc = await asyncio.create_subprocess_exec(

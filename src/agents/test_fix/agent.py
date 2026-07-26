@@ -36,10 +36,10 @@ def _normalize_path(raw: str) -> str:
     except Exception:
         resolved = raw
 
-    for marker in ("/tests/", "/test/"):
+    for marker in ("/src/tests/", "/tests/", "/test/"):
         idx = resolved.rfind(marker)  # rfind — last occurrence, not first
         if idx >= 0:
-            return resolved[idx + 1:]  # "tests/unit/test_foo.py"
+            return resolved[idx + 1:]  # "src/tests/test_foo.py" or "tests/unit/test_foo.py"
 
     # No standard test directory prefix — try to extract just the filename
     # and assume it lives under tests/.

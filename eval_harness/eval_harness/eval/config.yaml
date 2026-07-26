@@ -1,0 +1,91 @@
+# Evaluation harness configuration
+# Team 10 — Multi-Agent Code Review & Auto-Debugging System
+#
+# Sample sizes default small so the full suite is cheap to run during
+# development. Set *_n: null (or omit) to run on the full dataset for the
+# final Evaluation Report.
+#
+# Scope: Python-only. Benchmarks that turned out to be C/C++ or Java
+# (PrimeVul, JITVul, SEC-bench, Defects4J, CodeXGLUE) were dropped from
+# this harness entirely — see Evaluation_Code_Generation_Instructions.md
+# for why, if you want the history.
+
+paths:
+  cache_dir: eval/cache
+  results_dir: results
+  dataset_dir: eval/data          # downloaded/prepared datasets land here
+
+sample_sizes:
+  seccodeplt_n: 150
+  bugsinpy_n: 60
+  patcheval_python_n: 80
+  ragas_n: 60
+  human_patch_review_n: 40
+  human_citation_review_n: 40
+  e2e_cases_per_source: 10   # PR cases built per source benchmark (bugsinpy + seccodeplt)
+  e2e_review_n: 20           # cases actually judged per run_e2e_review.py pass
+
+thresholds:
+  seccodeplt_target: 0.40
+  bugsinpy_detection_target: 0.45
+  bugsinpy_patch_pass_target: 0.35
+  patcheval_python_patch_success_target: 0.35
+  ragas_faithfulness_target: 0.75
+  ragas_answer_relevance_target: 0.70
+  pep8_agreement_target: 0.90
+
+bootstrap:
+  n_resamples: 1000
+  confidence_level: 0.95
+  random_seed: 42
+
+llm:
+  # used for the zero-shot single-call ablation baseline
+  model: "gpt-4o-mini"
+  temperature: 0.0
+  max_tokens: 2048
+
+release_gate:
+  # Declared BEFORE results exist, so the bar isn't unconsciously fit to
+  # whatever the first real run produces. eval/report/release_gate.py
+  # evaluates a completed run against these rules and prints PASS/FAIL —
+  # it does not decide anything on its own, it just applies the rule set
+  # honestly and consistently.
+  layer_a:
+    # every listed metric must meet its target in eval/config.yaml's
+    # `thresholds` block for Layer A to pass. `ci_key`, when present, names
+    # the metrics field holding that metric's bootstrap 95% CI (e.g.
+    # "accuracy_ci95") — the gate then checks the CI's LOWER bound against
+    # the target, not the raw point estimate, so a lucky sample can't pass
+    # a metric that's really borderline. Metrics without a ci_key (style
+    # agreement, patch pass rate — neither runner computes a CI yet) fall
+    # back to the point estimate, and the gate output says so explicitly
+    # rather than silently treating them as equally rigorous.
+    required_metrics:
+      - {benchmark: "SecCodePLT", metric: "f1", threshold_key: "seccodeplt_target", ci_key: "accuracy_ci95"}
+      - {benchmark: "BugsInPy", metric: "recall", threshold_key: "bugsinpy_detection_target", ci_key: "recall_ci95"}
+      - {benchmark: "PatchEval-python", metric: "clean_pass_rate", threshold_key: "patcheval_python_patch_success_target"}
+      - {benchmark: "Pylint-agreement", metric: "agreement", threshold_key: "pep8_agreement_target"}
+    # If this file exists (a committed final_report.json from a prior
+    # trusted run — e.g. the last release), the gate additionally checks
+    # that each CI-backed metric's new confidence interval overlaps the
+    # baseline's. A non-overlapping drop is flagged as a real regression;
+    # if the file doesn't exist yet, this check is SKIPPED, not silently
+    # passed — there's no baseline to compare against.
+    baseline_path: "eval/baseline/final_report.json"
+  layer_b:
+    min_positive_overall_mean: 3.5       # detection quality floor
+    min_clean_coverage_mean: 4.0         # false-positive avoidance floor (kept stricter — a
+                                          # system that cries wolf erodes trust fast)
+    min_judge_human_correlation: 0.6     # from calibrate_judge.py's TRUST_THRESHOLD; any
+                                          # dimension below this is excluded from the gate
+                                          # decision until re-calibrated, not silently passed
+  adversarial:
+    min_resistance_rate: 1.0             # ANY manipulated case is a release blocker, not an
+                                          # average to trade off against other scores
+  regression:
+    # no Layer A metric's new CI may fail to overlap the committed
+    # baseline's CI in the regressive direction (see compare_to_baseline
+    # discussion) — enforced by CI, not this script, but declared here
+    # for one source of truth
+    max_allowed_ci_non_overlap: 0

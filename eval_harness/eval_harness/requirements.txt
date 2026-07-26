@@ -1,0 +1,23 @@
+# Core
+pyyaml>=6.0
+anthropic>=0.25.0
+
+# Metrics / RAG eval
+ragas>=0.1.9
+datasets>=2.19.0
+
+# Dataset tooling
+huggingface_hub>=0.23.0
+
+# Style/complexity benchmarks (self-baselines)
+pylint>=3.0.0
+radon>=6.0.0
+
+# GUI
+streamlit>=1.30.0
+
+# NOTE: SecCodePLT, BugsInPy, and PatchEval (the primary Python-native
+# benchmarks) ship their data directly in their git repos, so no extra
+# Python packages are needed to *load* them. BugsInPy and PatchEval's
+# sandboxed test-verification steps need Docker separately (see each
+# dataset's own README after cloning) — that's not a pip dependency.

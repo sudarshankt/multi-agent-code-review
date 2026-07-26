@@ -29,7 +29,7 @@ export const ReviewDetailPage: React.FC<ReviewDetailPageProps> = ({ reviewId }) 
   // clicks to be silently reverted previously.
   const [localFixes, setLocalFixes] = useState<ProposedFix[]>([])
   const [testRun, setTestRun] = useState<TestRunSummary | null>(null)
-  const [fixesCommittedInfo, setFixesCommittedInfo] = useState<{ committed_count: number; commit_shas: Record<string, string> } | null>(null)
+  const [fixesCommittedInfo, setFixesCommittedInfo] = useState<{ committed_count: number; commit_shas: Record<string, string>; baseline_pr_url?: string } | null>(null)
 
   const { events, stages } = useSSE(reviewId, true, review?.status)
 
@@ -71,7 +71,8 @@ export const ReviewDetailPage: React.FC<ReviewDetailPageProps> = ({ reviewId }) 
       } else if (evt.type === 'fix_status_changed') {
         setLocalFixes(prev => prev.map(f => f.id === evt.fix_id ? { ...f, status: evt.new_status } : f))
       } else if (evt.type === 'fixes_committed') {
-        setFixesCommittedInfo({ committed_count: evt.committed_count, commit_shas: evt.commit_shas })
+        setFixesCommittedInfo({ committed_count: evt.committed_count, commit_shas: evt.commit_shas, baseline_pr_url: evt.baseline_pr_url })
+        setReview(prev => prev ? { ...prev, total_fixes: evt.committed_count, baseline_pr_url: evt.baseline_pr_url || prev.baseline_pr_url } : null)
         setLocalFixes(prev => prev.map(f => f.status === 'approved' ? { ...f, status: 'committed', commit_sha: evt.commit_shas?.[f.category] } : f))
       } else if (evt.type === 'test_run_update') {
         setTestRun({
@@ -138,11 +139,11 @@ export const ReviewDetailPage: React.FC<ReviewDetailPageProps> = ({ reviewId }) 
     setApplyLoading(true)
     try {
       const res = await fixesAPI.applyApprovedFixes(reviewId)
-      const { committed, commit_shas } = res.data
+      const { committed, commit_shas, baseline_pr_url } = res.data
       setLocalFixes(prev => prev.map(f =>
         f.status === 'approved' ? { ...f, status: 'committed', commit_sha: commit_shas[f.category] } : f
       ))
-      setReview(prev => prev ? { ...prev, total_fixes: committed } : null)
+      setReview(prev => prev ? { ...prev, total_fixes: committed, baseline_pr_url: baseline_pr_url || prev.baseline_pr_url } : null)
     } catch (e: any) {
       alert(e?.response?.data?.detail || 'Failed to apply fixes')
     }
@@ -314,24 +315,49 @@ export const ReviewDetailPage: React.FC<ReviewDetailPageProps> = ({ reviewId }) 
           </div>
         </div>
 
-        {/* Fix PR Link */}
+        {/* PR Links — Baseline (pre-fix) + Final (with fixes) */}
         {review.fix_pr_url && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-green-900">Fixes Applied</p>
-                <p className="text-sm text-green-700 mt-1">
-                  {review.total_fixes} issue{review.total_fixes !== 1 ? 's' : ''} fixed and committed to the PR branch
-                </p>
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            {/* Baseline PR — original code before AI fixes */}
+            {review.baseline_pr_url && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Base PR (Pre-Fix)</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Original code snapshot — before AI fixes were applied
+                    </p>
+                  </div>
+                  <a
+                    href={review.baseline_pr_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 bg-gray-600 text-white text-xs font-medium rounded hover:bg-gray-700 whitespace-nowrap"
+                  >
+                    View Baseline →
+                  </a>
+                </div>
               </div>
-              <a
-                href={review.fix_pr_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700"
-              >
-                View PR with Fixes →
-              </a>
+            )}
+
+            {/* Final PR — user's PR with AI fixes committed */}
+            <div className={`${review.baseline_pr_url ? '' : 'col-span-2'} bg-green-50 border border-green-200 rounded-lg p-4`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-green-900">Final PR (With Fixes)</p>
+                  <p className="text-xs text-green-700 mt-1">
+                    {review.total_fixes} issue{review.total_fixes !== 1 ? 's' : ''} fixed — AI fixes committed
+                  </p>
+                </div>
+                <a
+                  href={review.fix_pr_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 whitespace-nowrap"
+                >
+                  View Final PR →
+                </a>
+              </div>
             </div>
           </div>
         )}

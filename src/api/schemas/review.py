@@ -45,6 +45,7 @@ class ReviewDetailResponse(BaseModel):
     total_findings: int = 0
     total_fixes: int = 0
     fix_pr_url: str | None = None
+    baseline_pr_url: str | None = None
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None = None

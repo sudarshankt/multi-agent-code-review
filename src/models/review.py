@@ -9,6 +9,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 from src.models.finding import Finding
+from src.models.fix import FixStatus, ProposedFix, TestRunSummary
 
 
 class ReviewStatus(str, Enum):
@@ -66,9 +67,23 @@ class Review(BaseModel):
     fix_pr_url: str | None = None
     triggered_by: str | None = None
     error_message: str | None = None
+    proposed_fixes: list[ProposedFix] = Field(default_factory=list)
+    test_run: TestRunSummary | None = None
     created_at: datetime = Field(default_factory=_utcnow)
     updated_at: datetime = Field(default_factory=_utcnow)
     completed_at: datetime | None = None
 
     def touch(self) -> None:
         self.updated_at = _utcnow()
+
+    @property
+    def pending_fix_count(self) -> int:
+        return sum(1 for f in self.proposed_fixes if f.status == FixStatus.PENDING)
+
+    @property
+    def approved_fix_count(self) -> int:
+        return sum(1 for f in self.proposed_fixes if f.status == FixStatus.APPROVED)
+
+    @property
+    def committed_fix_count(self) -> int:
+        return sum(1 for f in self.proposed_fixes if f.status == FixStatus.COMMITTED)

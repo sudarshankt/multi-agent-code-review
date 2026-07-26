@@ -85,6 +85,7 @@ async def _run_review(review_id: str) -> None:
             "findings": [],
             "agent_results": {},
             "fix_results": [],
+            "proposed_fixes": [],
             "errors": [],
             "files_bypassed": 0,
         }
@@ -93,7 +94,7 @@ async def _run_review(review_id: str) -> None:
         # Update review with results.
         findings = result.get("findings", [])
         agent_results = result.get("agent_results", {})
-        fix_results = result.get("fix_results", [])
+        proposed_fixes = result.get("proposed_fixes", [])
 
         # Populate agent_results grouped by category (bug #7).
         for agent_name, agent_result_dict in agent_results.items():
@@ -103,12 +104,9 @@ async def _run_review(review_id: str) -> None:
                 review.agent_results[agent_name] = AgentResult(**agent_result_dict)
 
         review.total_findings = len(findings)
-        review.total_fixes = len([r for r in fix_results if r.success])
+        review.total_fixes = 0   # No commits yet — user must approve proposals
+        review.proposed_fixes = proposed_fixes
         review.status = ReviewStatus.COMPLETED
-
-        # Set fix PR URL to the original PR (fixes committed to same branch)
-        if review.total_fixes > 0 and review.pr_info.html_url:
-            review.fix_pr_url = review.pr_info.html_url
 
         await publish_event(review_id, "status_update", {"status": review.status.value})
         logger.info(

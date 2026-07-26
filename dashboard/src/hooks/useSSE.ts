@@ -138,15 +138,17 @@ export const useSSE = (reviewId: string | null, enabled = true, reviewStatus?: s
             setCurrentStage(data.stage)
           }
         } else if (data.type === 'agent_completed') {
-          // Update stages during analysis phase - mark analyzing as in progress
           setStages((prev) => {
             const updated = prev.map(stage => ({ ...stage }))
-            if (updated[2]) {
-              updated[2].status = 'in_progress'
-            }
+            if (updated[2]) updated[2].status = 'in_progress'
             return updated
           })
         }
+        // Fix-review and test-gate events (proposed_fix, fix_status_changed,
+        // fixes_committed, test_run_update) are intentionally NOT handled here.
+        // They're consumed directly from `events` by ReviewDetail, which is
+        // the single source of truth for fix state — avoiding a second copy
+        // of the list that would need merging (and could go stale/out of sync).
       } catch (e) {
         console.error('Failed to parse SSE event:', e)
       }

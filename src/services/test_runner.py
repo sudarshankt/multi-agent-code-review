@@ -161,13 +161,20 @@ class TestRunResult:
 
 
 class TestRunner:
-    """Clone a PR branch into a temp dir and run pytest against it."""
+    """Clone a PR branch into a temp dir and run pytest against it.
 
-    CLONE_TIMEOUT_SECS: int = 60
-    TEST_TIMEOUT_SECS: int = 120
+    Timeouts are read from settings (configurable via .env):
+    - test_gate_timeout_secs  → pytest runtime (default 300)
+    - clone uses a fixed 120s ceiling (git clone is network-bound, not test-bound).
+    """
 
     def __init__(self, settings=None) -> None:
         self.settings = settings or get_settings()
+        cfg = self.settings
+        self._pytest_timeout: float = float(
+            getattr(cfg, "test_gate_timeout_secs", None) or 600
+        )
+        self._clone_timeout: float = 300.0
 
     async def run_tests(self, owner: str, repo: str, branch: str) -> TestRunResult:
         """
@@ -262,7 +269,7 @@ class TestRunner:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=self.CLONE_TIMEOUT_SECS)
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=self._clone_timeout)
             if proc.returncode != 0:
                 logger.warning("git_clone_failed", stderr=stderr.decode(errors="replace")[:500])
                 return False
@@ -295,7 +302,7 @@ class TestRunner:
                 cwd=clone_dir,
             )
             stdout_b, stderr_b = await asyncio.wait_for(
-                proc.communicate(), timeout=self.TEST_TIMEOUT_SECS
+                proc.communicate(), timeout=self._pytest_timeout
             )
             stdout = stdout_b.decode(errors="replace")
             stderr = stderr_b.decode(errors="replace")

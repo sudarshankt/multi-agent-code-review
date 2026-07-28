@@ -1,0 +1,11 @@
+app.143.244.141.234.sslip.io {
+	reverse_proxy app:80
+}
+
+evalpr.143.244.141.234.sslip.io {
+	reverse_proxy eval_pr_gui:8501
+}
+
+harness.143.244.141.234.sslip.io {
+	reverse_proxy eval_harness_gui:8502
+}

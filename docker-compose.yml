@@ -13,8 +13,6 @@ services:
   app:
     build: .
     container_name: cap-pr-review-app
-    ports:
-      - "80:80"
     environment:
       - APP_ENV=production
     env_file:
@@ -24,3 +22,38 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  eval_pr_gui:
+    build:
+      context: .
+      dockerfile: eval_PR/Dockerfile
+    container_name: cap-pr-review-eval-pr
+    env_file:
+      - .env
+
+  eval_harness_gui:
+    build:
+      context: .
+      dockerfile: eval_harness/eval_harness/Dockerfile
+    container_name: cap-pr-review-eval-harness
+    env_file:
+      - .env
+
+  caddy:
+    image: caddy:2
+    container_name: cap-pr-review-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+      - eval_pr_gui
+      - eval_harness_gui
+
+volumes:
+  caddy_data:
+  caddy_config:

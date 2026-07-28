@@ -7,8 +7,9 @@ import re
 import time
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from src.api.dependencies import require_api_key
 from src.core.config import get_settings
 from src.core.constants import SOURCE_EXTENSIONS
 from src.api.schemas.review import (
@@ -178,7 +179,7 @@ async def _run_review(review_id: str) -> None:
         await publish_event(review_id, "status_update", {"status": review.status.value})
 
 
-@router.post("/reviews", status_code=202)
+@router.post("/reviews", status_code=202, dependencies=[Depends(require_api_key)])
 async def create_review(req: CreateReviewRequest) -> ReviewResponse:
     """
     Create a PR review. Accepts pr_url or (owner, repo, pr_number).

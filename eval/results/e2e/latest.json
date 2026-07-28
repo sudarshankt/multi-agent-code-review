@@ -1,79 +1,54 @@
 {
-  "generated_at": "2026-07-26T10:51:55.170937Z",
+  "generated_at": "2026-07-28T16:08:32.091583Z",
   "agents": [
     {
       "agent_name": "security",
       "cases": 5,
-      "true_positives": 8,
+      "true_positives": 3,
       "false_positives": 3,
-      "false_negatives": 3,
-      "precision": 0.727,
-      "recall": 0.727,
-      "f1": 0.727,
-      "avg_similarity": 0.093,
-      "fix_attempted": 3,
+      "false_negatives": 8,
+      "precision": 0.5,
+      "recall": 0.273,
+      "f1": 0.353,
+      "avg_similarity": 0.66,
+      "fix_attempted": 1,
       "fix_success_rate": 1.0,
       "syntax_valid_rate": 1.0,
-      "resolved_rate": 0.667,
-      "avg_correctness": 0.717,
-      "avg_safety": 0.893,
-      "avg_minimality": 0.933,
-      "avg_explanation_quality": 0.933,
+      "resolved_rate": 1.0,
+      "avg_correctness": 1.0,
+      "avg_safety": 1.0,
+      "avg_minimality": 1.0,
+      "avg_explanation_quality": 1.0,
       "case_results": [
         {
           "finding": {
-            "file": "tests/test_data/app_vunerable.py",
-            "matched": [
-              {
-                "expected": {
-                  "description": "Hardcoded API key / secret in source",
-                  "start_line": 9,
-                  "end_line": 9,
-                  "severity": "critical"
-                },
-                "actual_title": "Hardcoded API Key (STRIPE_API_KEY)",
-                "actual_description": "The Stripe API key is hardcoded in the source code. If this code is committed to a repository, the secret is exposed to anyone with access. Attackers can extract and abuse the key.",
-                "actual_start_line": 10,
-                "similarity": 0.259
-              },
-              {
-                "expected": {
-                  "description": "Insecure MD5 hash used for password storage",
-                  "start_line": 28,
-                  "end_line": 31,
-                  "severity": "medium"
-                },
-                "actual_title": "Weak Cryptographic Algorithm (MD5 for Password Hashing)",
-                "actual_description": "MD5 is cryptographically broken and susceptible to collision attacks. Using it for password hashing allows attackers to crack passwords efficiently with rainbow tables and GPU acceleration.",
-                "actual_start_line": 25,
-                "similarity": 0.267
-              },
-              {
-                "expected": {
-                  "description": "Path traversal via unsanitized filename in os.path.join",
-                  "start_line": 35,
-                  "end_line": 39,
-                  "severity": "high"
-                },
-                "actual_title": "Insecure Deserialization via pickle.loads",
-                "actual_description": "The load_session_data function deserializes cookie data using pickle.loads without any integrity or authenticity checks. An attacker can craft a malicious serialized payload that executes arbitrary code on the server when deserialized.",
-                "actual_start_line": 41,
-                "similarity": 0.062
-              },
-              {
-                "expected": {
-                  "description": "Insecure deserialization via pickle.loads on untrusted data",
-                  "start_line": 43,
-                  "end_line": 45,
-                  "severity": "critical"
-                },
-                "actual_title": "OS Command Injection in ping_host",
-                "actual_description": "User-supplied IP address is directly concatenated into shell commands via both os.system and subprocess.run with shell=True. An attacker can inject arbitrary shell commands using payloads like '8.8.8.8; cat /etc/passwd' or '$(malicious_cmd)'.",
-                "actual_start_line": 45,
-                "similarity": 0.047
-              }
-            ],
+            "file": "tests_local/test_data/app_vunerable.py",
+            "matched": [],
             "missed": [
+              {
+                "description": "Hardcoded API key / secret in source",
+                "start_line": 9,
+                "end_line": 9,
+                "severity": "critical"
+              },
+              {
+                "description": "Insecure MD5 hash used for password storage",
+                "start_line": 28,
+                "end_line": 31,
+                "severity": "medium"
+              },
+              {
+                "description": "Path traversal via unsanitized filename in os.path.join",
+                "start_line": 35,
+                "end_line": 39,
+                "severity": "high"
+              },
+              {
+                "description": "Insecure deserialization via pickle.loads on untrusted data",
+                "start_line": 43,
+                "end_line": 45,
+                "severity": "critical"
+              },
               {
                 "description": "OS command injection via os.system with unsanitized input",
                 "start_line": 47,
@@ -87,61 +62,39 @@
                 "severity": "high"
               }
             ],
-            "unexpected": [
-              "Path Traversal in File Read Function"
-            ]
-          },
-          "fix_attempted": true,
-          "fix_success": true,
-          "syntax_valid": true,
-          "fix_error": null,
-          "judge": {
-            "resolved": true,
-            "correctness": 1.0,
-            "safety": 0.98,
-            "minimality": 0.95,
-            "explanation_quality": 1.0,
-            "regression_risk": "low",
-            "notes": "Hardcoded key moved to env, MD5 replaced with PBKDF2+salt, pickle replaced with JSON, command injection fixed with IP validation and subprocess list/shell=False. No unnecessary changes, but new password hash output format may require migration."
-          }
-        },
-        {
-          "finding": {
-            "file": "tests/test_data/profile.py",
-            "matched": [
-              {
-                "expected": {
-                  "description": "SSRF: unvalidated user-supplied avatar_url passed to requests.get",
-                  "start_line": 9,
-                  "end_line": 9,
-                  "severity": "high"
-                },
-                "actual_title": "Server-Side Request Forgery (SSRF) via user-controlled avatar URL",
-                "actual_description": "The function fetches an arbitrary URL from user-supplied input (`avatar_url`) without any validation. An attacker can provide a URL pointing to internal services (e.g., `http://169.254.169.254/latest/meta-data/` on AWS) to exfiltrate sensitive data or interact with internal systems. This is a classic SSRF vulnerability.",
-                "actual_start_line": 5,
-                "similarity": 0.01
-              }
-            ],
-            "missed": [],
             "unexpected": []
           },
-          "fix_attempted": true,
-          "fix_success": true,
-          "syntax_valid": true,
+          "fix_attempted": false,
+          "fix_success": false,
+          "syntax_valid": null,
           "fix_error": null,
-          "judge": {
-            "resolved": false,
-            "correctness": 0.4,
-            "safety": 0.8,
-            "minimality": 0.9,
-            "explanation_quality": 0.85,
-            "regression_risk": "medium",
-            "notes": "Fix adds scheme validation and IP check but uses the original hostname in the request, leaving DNS rebinding (TOCTOU) vulnerability; only resolves IPv4, blocking all IPv6; changes error handling."
-          }
+          "judge": null
         },
         {
           "finding": {
-            "file": "tests/test_data/app_vunerable-v1.py",
+            "file": "tests_local/test_data/profile.py",
+            "matched": [],
+            "missed": [
+              {
+                "description": "SSRF: unvalidated user-supplied avatar_url passed to requests.get",
+                "start_line": 9,
+                "end_line": 9,
+                "severity": "high"
+              }
+            ],
+            "unexpected": [
+              "Server-Side Request Forgery (SSRF) via unvalidated avatar_url"
+            ]
+          },
+          "fix_attempted": false,
+          "fix_success": false,
+          "syntax_valid": null,
+          "fix_error": null,
+          "judge": null
+        },
+        {
+          "finding": {
+            "file": "tests_local/test_data/app_vunerable-v1.py",
             "matched": [
               {
                 "expected": {
@@ -150,10 +103,10 @@
                   "end_line": 25,
                   "severity": "high"
                 },
-                "actual_title": "Server-Side Request Forgery (SSRF) in fetch_avatar",
-                "actual_description": "The `fetch_avatar` function takes an `avatar_url` parameter and directly makes an HTTP GET request to that URL using the `requests` library without any validation. An attacker could supply internal network addresses, cloud metadata endpoints (e.g., 169.254.169.254), or arbitrary external hosts, potentially leading to information disclosure, internal service scanning, or further attacks.",
-                "actual_start_line": 23,
-                "similarity": 0.037
+                "actual_title": "Server-Side Request Forgery (SSRF) in `fetch_avatar`",
+                "actual_description": "The function `fetch_avatar` takes a user-supplied URL and directly makes an HTTP GET request with `requests.get(avatar_url)`. An attacker can provide internal IP addresses, metadata endpoints (e.g., 169.254.169.254 on AWS), or other sensitive services, leading to potential data exfiltration or network pivoting.",
+                "actual_start_line": 19,
+                "similarity": 0.515
               },
               {
                 "expected": {
@@ -162,10 +115,10 @@
                   "end_line": 35,
                   "severity": "high"
                 },
-                "actual_title": "Missing Authorization Check in Invoice Retrieval (IDOR)",
-                "actual_description": "The `get_invoice` function accepts both an `invoice_id` and an `authenticated_user_id` but only uses the `invoice_id` to fetch the invoice from the database. It does not verify that the authenticated user is the owner of the requested invoice. This allows any authenticated user to access any other user's billing invoices by guessing or enumerating invoice IDs.",
-                "actual_start_line": 32,
-                "similarity": 0.018
+                "actual_title": "Missing Authorization Check (IDOR) in `get_invoice`",
+                "actual_description": "The function `get_invoice` retrieves an invoice by its ID without checking whether the invoice belongs to `authenticated_user_id`. The test demonstrates that user 'user_abc' can access invoice '102' belonging to 'user_xyz'. This is a classic Insecure Direct Object Reference (IDOR) leading to unauthorized data access.",
+                "actual_start_line": 28,
+                "similarity": 0.774
               },
               {
                 "expected": {
@@ -174,10 +127,10 @@
                   "end_line": 40,
                   "severity": "high"
                 },
-                "actual_title": "Hardcoded JWT Secret",
-                "actual_description": "The JWT signing key 'super_secret_development_key_99182' is hardcoded in the source code. If the code is deployed, this secret is exposed to anyone with access to the code repository or binary. Attackers can forge valid JWTs and impersonate any user.",
-                "actual_start_line": 39,
-                "similarity": 0.044
+                "actual_title": "JWT Verification Accepts 'none' Algorithm",
+                "actual_description": "The jwt.decode call includes 'none' in the list of allowed algorithms. The 'none' algorithm allows tokens with no signature, making it trivially forgeable. An attacker can craft a token with arbitrary claims (e.g., any user_id) and bypass authentication entirely.",
+                "actual_start_line": 40,
+                "similarity": 0.692
               }
             ],
             "missed": [
@@ -189,7 +142,7 @@
               }
             ],
             "unexpected": [
-              "JWT Algorithm Confusion ('none' algorithm allowed)"
+              "Hardcoded JWT Secret Key"
             ]
           },
           "fix_attempted": true,
@@ -198,17 +151,17 @@
           "fix_error": null,
           "judge": {
             "resolved": true,
-            "correctness": 0.75,
-            "safety": 0.9,
-            "minimality": 0.95,
-            "explanation_quality": 0.95,
-            "regression_risk": "none",
-            "notes": "SSRF fix blocks private IPs but does not prevent redirect-based SSRF bypass. IDOR and JWT fixes are solid. Import of ipaddress inside function is quirky but safe."
+            "correctness": 1.0,
+            "safety": 1.0,
+            "minimality": 1.0,
+            "explanation_quality": 1.0,
+            "regression_risk": "low",
+            "notes": "All three findings are directly addressed: SSRF via strict URL parsing+IP filtering+allowlist, IDOR via user_id ownership check returning None, JWT algorithm restriction to HS256. Changes are precise with no new issues and the explanation accurately reflects them."
           }
         },
         {
           "finding": {
-            "file": "tests/test_data/sanitizer.py",
+            "file": "tests_local/test_data/sanitizer.py",
             "matched": [],
             "missed": [],
             "unexpected": []
@@ -221,11 +174,11 @@
         },
         {
           "finding": {
-            "file": "tests/test_data/billing.py",
+            "file": "tests_local/test_data/billing.py",
             "matched": [],
             "missed": [],
             "unexpected": [
-              "Invoice ID enumeration via distinct HTTP status codes"
+              "Invoice ID enumeration via response status discrepancy"
             ]
           },
           "fix_attempted": false,
@@ -239,20 +192,20 @@
     {
       "agent_name": "bug_detection",
       "cases": 1,
-      "true_positives": 4,
-      "false_positives": 1,
-      "false_negatives": 1,
-      "precision": 0.8,
-      "recall": 0.8,
-      "f1": 0.8,
-      "avg_similarity": 0.384,
+      "true_positives": 3,
+      "false_positives": 2,
+      "false_negatives": 2,
+      "precision": 0.6,
+      "recall": 0.6,
+      "f1": 0.6,
+      "avg_similarity": 0.516,
       "fix_attempted": 1,
       "fix_success_rate": 1.0,
       "syntax_valid_rate": 1.0,
       "resolved_rate": 1.0,
       "avg_correctness": 1.0,
       "avg_safety": 0.95,
-      "avg_minimality": 0.9,
+      "avg_minimality": 1.0,
       "avg_explanation_quality": 1.0,
       "case_results": [
         {
@@ -266,22 +219,10 @@
                   "end_line": 6,
                   "severity": "medium"
                 },
-                "actual_title": "IndexError on empty input in get_first_item",
-                "actual_description": "The function get_first_item directly accesses items[0] without checking if the list is empty. If called with an empty list, it raises an IndexError, crashing the program.",
-                "actual_start_line": 5,
-                "similarity": 0.183
-              },
-              {
-                "expected": {
-                  "description": "ZeroDivisionError when values is empty in average",
-                  "start_line": 12,
-                  "end_line": 12,
-                  "severity": "medium"
-                },
-                "actual_title": "ZeroDivisionError on empty input in average",
-                "actual_description": "The function average computes total / len(values). When values is empty, len(values) is 0, causing a ZeroDivisionError. This input is not validated.",
-                "actual_start_line": 10,
-                "similarity": 0.345
+                "actual_title": "IndexError on empty list in get_first_item",
+                "actual_description": "The function accesses items[0] without checking if the list is empty, causing an IndexError when called with no elements. This crashes the program or requires callers to handle the unexpected exception.",
+                "actual_start_line": 3,
+                "similarity": 0.609
               },
               {
                 "expected": {
@@ -293,7 +234,7 @@
                 "actual_title": "Mutable default argument",
                 "actual_description": "Function 'append_to_list' uses a mutable default argument, which is shared across calls.",
                 "actual_start_line": 15,
-                "similarity": 0.648
+                "similarity": 0.403
               },
               {
                 "expected": {
@@ -305,10 +246,16 @@
                 "actual_title": "Silently swallowed exception",
                 "actual_description": "Exception handler body is just 'pass', hiding failures.",
                 "actual_start_line": 25,
-                "similarity": 0.359
+                "similarity": 0.536
               }
             ],
             "missed": [
+              {
+                "description": "ZeroDivisionError when values is empty in average",
+                "start_line": 12,
+                "end_line": 12,
+                "severity": "medium"
+              },
               {
                 "description": "Uses `is` for string value comparison instead of `==`",
                 "start_line": 31,
@@ -317,7 +264,8 @@
               }
             ],
             "unexpected": [
-              "Incorrect string comparison using 'is' instead of '=='"
+              "ZeroDivisionError when calling average on empty list",
+              "Identity comparison used for string value check"
             ]
           },
           "fix_attempted": true,
@@ -328,10 +276,10 @@
             "resolved": true,
             "correctness": 1.0,
             "safety": 0.95,
-            "minimality": 0.9,
+            "minimality": 1.0,
             "explanation_quality": 1.0,
             "regression_risk": "low",
-            "notes": "Addressed all four findings; the extra fix for 'is' vs '==' is harmless but slightly beyond the requested scope; read_config now restricts caught exceptions to OSError which could affect callers relying on the old blanket swallow."
+            "notes": "All three findings addressed; IndexError changed to ValueError (minor behavior shift), otherwise safe and minimal."
           }
         }
       ]
@@ -340,12 +288,12 @@
       "agent_name": "performance",
       "cases": 1,
       "true_positives": 4,
-      "false_positives": 5,
+      "false_positives": 1,
       "false_negatives": 0,
-      "precision": 0.444,
+      "precision": 0.8,
       "recall": 1.0,
-      "f1": 0.615,
-      "avg_similarity": 0.343,
+      "f1": 0.889,
+      "avg_similarity": 0.398,
       "fix_attempted": 1,
       "fix_success_rate": 0.0,
       "syntax_valid_rate": 0.0,
@@ -369,7 +317,7 @@
                 "actual_title": "Nested loops (depth 2)",
                 "actual_description": "Nested loops can lead to quadratic or worse time complexity.",
                 "actual_start_line": 8,
-                "similarity": 0.35
+                "similarity": 0.441
               },
               {
                 "expected": {
@@ -381,7 +329,7 @@
                 "actual_title": "String/list build-up with += in loop",
                 "actual_description": "Repeated concatenation inside a loop reallocates each iteration.",
                 "actual_start_line": 18,
-                "similarity": 0.496
+                "similarity": 0.568
               },
               {
                 "expected": {
@@ -393,7 +341,7 @@
                 "actual_title": "Potential unbounded growth of 'found'",
                 "actual_description": "'found.append()' is called inside a loop; this can grow without bound.",
                 "actual_start_line": 27,
-                "similarity": 0.42
+                "similarity": 0.221
               },
               {
                 "expected": {
@@ -405,16 +353,12 @@
                 "actual_title": "Potential unbounded growth of 'results'",
                 "actual_description": "'results.append()' is called inside a loop; this can grow without bound.",
                 "actual_start_line": 36,
-                "similarity": 0.108
+                "similarity": 0.362
               }
             ],
             "missed": [],
             "unexpected": [
-              "Potential unbounded growth of 'duplicates'",
-              "O(n^2) nested loops for duplicate detection",
-              "String concatenation in loop causes O(n^2) memory reallocation",
-              "O(n*m) list membership checks inside loop",
-              "Potential repeated file I/O when paths contain duplicates"
+              "Potential unbounded growth of 'duplicates'"
             ]
           },
           "fix_attempted": true,
@@ -429,12 +373,12 @@
       "agent_name": "style",
       "cases": 1,
       "true_positives": 7,
-      "false_positives": 5,
+      "false_positives": 2,
       "false_negatives": 0,
-      "precision": 0.583,
+      "precision": 0.778,
       "recall": 1.0,
-      "f1": 0.737,
-      "avg_similarity": 0.439,
+      "f1": 0.875,
+      "avg_similarity": 0.889,
       "fix_attempted": 1,
       "fix_success_rate": 1.0,
       "syntax_valid_rate": 1.0,
@@ -458,7 +402,7 @@
                 "actual_title": "F401: `os` imported but unused",
                 "actual_description": "`os` imported but unused",
                 "actual_start_line": 2,
-                "similarity": 0.488
+                "similarity": 0.891
               },
               {
                 "expected": {
@@ -470,7 +414,7 @@
                 "actual_title": "F401: `sys` imported but unused",
                 "actual_description": "`sys` imported but unused",
                 "actual_start_line": 3,
-                "similarity": 0.465
+                "similarity": 0.917
               },
               {
                 "expected": {
@@ -482,7 +426,7 @@
                 "actual_title": "F401: `json` imported but unused",
                 "actual_description": "`json` imported but unused",
                 "actual_start_line": 4,
-                "similarity": 0.444
+                "similarity": 0.947
               },
               {
                 "expected": {
@@ -491,10 +435,10 @@
                   "end_line": 7,
                   "severity": "low"
                 },
-                "actual_title": "F841: Local variable `unused_var` is assigned to but nev",
-                "actual_description": "Local variable `unused_var` is assigned to but never used",
-                "actual_start_line": 8,
-                "similarity": 0.213
+                "actual_title": "Non-standard naming conventions (PEP 8)",
+                "actual_description": "The function name 'CalculateTotal' and parameter 'Items' use PascalCase instead of the recommended snake_case (calculate_total, items). This is inconsistent with standard Python style.",
+                "actual_start_line": 7,
+                "similarity": 0.883
               },
               {
                 "expected": {
@@ -503,10 +447,10 @@
                   "end_line": 8,
                   "severity": "low"
                 },
-                "actual_title": "Missing docstring in CalculateTotal function",
-                "actual_description": "The function lacks a docstring explaining its purpose, parameters, and return value, making it harder for developers to understand its intent.",
-                "actual_start_line": 6,
-                "similarity": 0.201
+                "actual_title": "F841: Local variable `unused_var` is assigned to but nev",
+                "actual_description": "Local variable `unused_var` is assigned to but never used",
+                "actual_start_line": 8,
+                "similarity": 0.9
               },
               {
                 "expected": {
@@ -518,7 +462,7 @@
                 "actual_title": "E711: Comparison to `None` should be `cond is None`",
                 "actual_description": "Comparison to `None` should be `cond is None`",
                 "actual_start_line": 16,
-                "similarity": 0.74
+                "similarity": 0.802
               },
               {
                 "expected": {
@@ -530,16 +474,13 @@
                 "actual_title": "E722: Do not use bare `except`",
                 "actual_description": "Do not use bare `except`",
                 "actual_start_line": 24,
-                "similarity": 0.524
+                "similarity": 0.882
               }
             ],
             "missed": [],
             "unexpected": [
-              "Missing docstring in check_value function",
-              "Missing docstring in risky function",
-              "Generic function name 'check_value'",
-              "Silent exception handling in 'risky' function",
-              "Loop variable name 'i' is not descriptive"
+              "Missing docstrings for functions",
+              "Unnecessary manual loop for summation"
             ]
           },
           "fix_attempted": true,
@@ -553,7 +494,7 @@
             "minimality": 1.0,
             "explanation_quality": 1.0,
             "regression_risk": "none",
-            "notes": "Fix precisely addresses all seven findings with no unnecessary modifications; changes are safe and maintain original behavior."
+            "notes": "All findings addressed: imports removed, naming fixed, unused variable removed, None comparison corrected, bare except replaced with ZeroDivisionError. No behavioral regressions."
           }
         }
       ]

@@ -12,9 +12,10 @@ import time
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from src.api.dependencies import require_api_key
 from src.core.logging import get_logger
 from src.models.fix import FixStatus, TestRunStatus, TestRunSummary
 
@@ -77,7 +78,7 @@ async def list_proposed_fixes(review_id: str) -> dict[str, Any]:
 # PATCH /reviews/{id}/fixes/{fix_id}  — approve or reject one fix
 # ---------------------------------------------------------------------------
 
-@router.patch("/reviews/{review_id}/fixes/{fix_id}")
+@router.patch("/reviews/{review_id}/fixes/{fix_id}", dependencies=[Depends(require_api_key)])
 async def review_fix(review_id: str, fix_id: str, body: ReviewFixAction) -> dict[str, Any]:
     if body.action not in ("approve", "reject"):
         raise HTTPException(status_code=400, detail="action must be 'approve' or 'reject'")
@@ -112,7 +113,7 @@ async def review_fix(review_id: str, fix_id: str, body: ReviewFixAction) -> dict
 # POST /reviews/{id}/fixes/apply  — commit all approved fixes to GitHub
 # ---------------------------------------------------------------------------
 
-@router.post("/reviews/{review_id}/fixes/apply")
+@router.post("/reviews/{review_id}/fixes/apply", dependencies=[Depends(require_api_key)])
 async def apply_approved_fixes(review_id: str) -> ApplyFixesResponse:
     review = _get_review(review_id)
 
@@ -225,7 +226,7 @@ async def apply_approved_fixes(review_id: str) -> ApplyFixesResponse:
 # code onto the clone.
 # ---------------------------------------------------------------------------
 
-@router.post("/reviews/{review_id}/fixes/run-tests", status_code=202)
+@router.post("/reviews/{review_id}/fixes/run-tests", status_code=202, dependencies=[Depends(require_api_key)])
 async def run_tests(review_id: str, body: RunTestsRequest) -> dict[str, Any]:
     review = _get_review(review_id)
 
@@ -305,7 +306,7 @@ class FixTestsResponse(BaseModel):
     message: str = ""
 
 
-@router.post("/reviews/{review_id}/fixes/fix-tests", status_code=202)
+@router.post("/reviews/{review_id}/fixes/fix-tests", status_code=202, dependencies=[Depends(require_api_key)])
 async def fix_failing_tests(review_id: str) -> dict[str, Any]:
     review = _get_review(review_id)
 

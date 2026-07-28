@@ -438,23 +438,16 @@ class TestRunner:
 
     async def _run_pytest(self, clone_dir: str) -> TestRunResult:
         python_exe = _resolve_venv_python()
-        # Point pytest at the tests/ subdirectory when one exists — it's
-        # common for repos to have the test-tree under tests/, and running
-        # pytest on the whole repo root can accidentally skip test discovery
-        # when pyproject.toml / conftest.py aren't in the expected spots.
-        test_dir = os.path.join(clone_dir, "tests")
-        target = test_dir if os.path.isdir(test_dir) else clone_dir
-
-        # Only run tests from src/tests/ — no other directory, no fallback.
-        test_dir = os.path.join(clone_dir, "src", "tests")
+        # Only run tests from tests_local/ — no other directory, no fallback.
+        test_dir = os.path.join(clone_dir, "tests_local")
         if not os.path.isdir(test_dir):
-            logger.info("no_src_tests_directory", clone_dir=clone_dir)
+            logger.info("no_tests_local_directory", clone_dir=clone_dir)
             return TestRunResult(
                 passed=True, exit_code=0, skipped=True,
-                skip_reason="no src/tests directory found — nothing to run",
+                skip_reason="no tests_local directory found — nothing to run",
             )
 
-        cmd = [python_exe, "-m", "pytest", "--tb=short", "-q", "--no-header", "src/tests"]
+        cmd = [python_exe, "-m", "pytest", "--tb=short", "-q", "--no-header", "tests_local"]
         logger.info("test_runner_cmd", cmd=cmd, clone_dir=clone_dir)
 
         try:

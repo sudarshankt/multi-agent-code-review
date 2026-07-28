@@ -129,10 +129,12 @@ with st.expander("📖 What does each layer measure? (read this first)", expande
 — that comparison, not the raw number, is the real evidence the multi-agent design is
 worth its complexity.
 
-**Important honesty note:** until `eval/agent_interface.py`'s functions are wired to
-your real LangGraph agents, every result below is a *placeholder* that proves the
-harness runs correctly — not a real measurement of your agents. This GUI will tell you
-clearly which is which.
+**Integration status:** `eval/agent_interface.py`'s functions are wired to the real
+LangGraph agents (Security, Bug Detection, Style, Fix) and the real orchestrator graph
+— results below are genuine measurements, not placeholders. The one thing that can
+still return a placeholder is `zero_shot_llm_call` / the LLM judge, and only when no
+API key is configured for the selected model; each section below still says so
+explicitly when that's the case.
         """
     )
 
@@ -454,9 +456,12 @@ else:
     metrics = e2e.get("metrics", {})
     if metrics.get("n_judged", 0) == 0:
         st.warning(
-            "⚠️ The LLM judge isn't wired to a real model yet (`eval/e2e/llm_judge.py`'s "
-            "`_call_judge_llm`), so these are placeholder zeros proving the pipeline runs "
-            "— not real quality scores."
+            "⚠️ No cases were judged in this run (`n_judged` = 0) — these are placeholder "
+            "zeros, not real quality scores. The judge itself (`eval/e2e/llm_judge.py`'s "
+            "`_call_judge_llm`) is wired to a real model call; a 0 here means either no "
+            "API key is configured for the selected judge model, or every judge call in "
+            "this specific run failed to parse (see `n_parse_failures` in the raw JSON). "
+            "Re-run the evaluation to get a current answer."
         )
     else:
         c1, c2 = st.columns(2)
@@ -495,7 +500,11 @@ if not adv:
 else:
     metrics = adv.get("metrics", {})
     if metrics.get("n_judged", 0) == 0:
-        st.warning("⚠️ Judge not wired yet — placeholder result, not a real resistance score.")
+        st.warning(
+            "⚠️ No cases were judged in this run (`n_judged` = 0) — placeholder result, "
+            "not a real resistance score. The judge is wired to a real model call; check "
+            "that an API key is configured for the selected judge model, then re-run."
+        )
     else:
         rate = metrics.get("resistance_rate")
         if rate is not None and rate < 1.0:

@@ -1,20 +1,19 @@
 """Plug points into the real multi-agent pipeline.
 
 The eval harness is intentionally decoupled from the app (Section 1:
-"standalone evaluation harness (separate from the app pipeline)"). Most
-functions below are stubs with a clearly-marked TODO — replace the body
-with a call into your actual LangGraph agents (e.g. import the compiled
-graph and invoke the relevant node directly, or hit the FastAPI endpoint).
+"standalone evaluation harness (separate from the app pipeline)"). Every
+function below is wired to the real product code: `predict_vulnerability`,
+`predict_bug`, `style_flags` call the real SecurityAgent/BugDetectionAgent/
+StyleAgent; `generate_patch` calls the real FixAgent; `rag_answer_with_context`
+calls the real SecurityRetriever; `run_full_pipeline` invokes the real
+compiled LangGraph orchestrator graph. `zero_shot_llm_call` is the ablation
+baseline and doesn't need product agent code at all, just a plain LLM call
+(see eval/llm_config.py).
 
-The one exception is `zero_shot_llm_call` — the ablation baseline doesn't
-need your product's agent code at all, just a plain LLM call, so it's
-wired to a real Anthropic API call (see eval/llm_config.py) rather than
-left as a stub.
-
-Until the remaining stubs are wired up, each returns a deterministic-but-
-fake prediction so the rest of the harness (metrics, bootstrap CI,
-aggregation, report generation) can be developed and tested end-to-end
-without the app running.
+Each function still degrades gracefully rather than crashing the harness:
+if the app's dependencies aren't importable, or an agent call fails, it
+either raises (default) or returns a safe empty/default value under
+EVAL_HARNESS_LENIENT=1 — see `_handle_integration_error` below.
 """
 from __future__ import annotations
 

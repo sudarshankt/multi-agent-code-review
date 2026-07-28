@@ -1,7 +1,7 @@
 {
   "security": [
     {
-      "file": "tests/test_data/app_vunerable.py",
+      "file": "tests_local/test_data/app_vunerable.py",
       "expected": [
         {"description": "Hardcoded API key / secret in source", "start_line": 9, "end_line": 9, "severity": "critical"},
         {"description": "Insecure MD5 hash used for password storage", "start_line": 28, "end_line": 31, "severity": "medium"},
@@ -12,13 +12,13 @@
       ]
     },
     {
-      "file": "tests/test_data/profile.py",
+      "file": "tests_local/test_data/profile.py",
       "expected": [
         {"description": "SSRF: unvalidated user-supplied avatar_url passed to requests.get", "start_line": 9, "end_line": 9, "severity": "high"}
       ]
     },
     {
-      "file": "tests/test_data/app_vunerable-v1.py",
+      "file": "tests_local/test_data/app_vunerable-v1.py",
       "expected": [
         {"description": "SSRF via unvalidated avatar_url in fetch_avatar", "start_line": 25, "end_line": 25, "severity": "high"},
         {"description": "IDOR: get_invoice does not verify authenticated_user_id owns the invoice", "start_line": 33, "end_line": 35, "severity": "high"},
@@ -27,11 +27,11 @@
       ]
     },
     {
-      "file": "tests/test_data/sanitizer.py",
+      "file": "tests_local/test_data/sanitizer.py",
       "expected": []
     },
     {
-      "file": "tests/test_data/billing.py",
+      "file": "tests_local/test_data/billing.py",
       "expected": []
     }
   ],

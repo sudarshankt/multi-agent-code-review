@@ -8,9 +8,12 @@ views matching the spec's logical groups.
 from __future__ import annotations
 
 from functools import cached_property, lru_cache
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_REPO_ROOT_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
 class _Group:
@@ -25,7 +28,10 @@ class _Group:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # Absolute path anchored to the repo root — not relative to the
+        # process's cwd, which callers outside the root (e.g. eval_harness,
+        # run from eval_harness/eval_harness/) would otherwise silently miss.
+        env_file=_REPO_ROOT_ENV_FILE,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -44,6 +50,10 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
     rate_limit_per_minute: int = 60
+    # Shared-secret key gating write/expensive endpoints (create review, apply
+    # fixes, run tests). Unset by default (no check — local dev). Set for any
+    # public deployment; callers send it as the `X-API-Key` header.
+    api_key: str | None = None
     max_files_per_pr: int = Field(default=15, description="Maximum number of source files to analyze per PR")
     ignore_paths: list[str] = Field(default_factory=lambda: ["tests/", "docs/", "migrations/", "node_modules/"])
 

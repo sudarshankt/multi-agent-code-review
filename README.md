@@ -8,18 +8,30 @@ An AI-powered system that automatically analyzes GitHub PRs using 5 specialized 
 
 ### Prerequisites
 
-- Python 3.12+ (verified 3.14.2)
-- Node 18+ (for dashboard)
-- Docker Compose (for Redis)
+- Python 3.12+ (any 3.12+ interpreter works; `make venv`/`make install` hardcode
+  `python3.14` specifically — if you don't have that exact version, create the
+  venv manually first with whatever 3.12+ you have, e.g. `python3.12 -m venv .venv`,
+  then run `make install` to reuse it)
+- Node 18+ (for dashboard) — verified with Node 24
+- Docker + Docker Compose (for Redis)
 - GitHub Enterprise or public GitHub account
+- An LLM API key for at least one supported provider — DeepSeek is the
+  configured default (`MODEL_PROVIDER=deepseek`, `PRIMARY_MODEL=deepseek-v4-pro`
+  in `.env.example`); Anthropic/OpenAI/Gemini also work by changing
+  `MODEL_PROVIDER`/`PRIMARY_MODEL` and the matching `*_API_KEY`
 
 ### Setup
 
 ```bash
 # 1. Create venv and install dependencies
-python3.14 -m venv .venv
+python3.12 -m venv .venv   # or python3.14, or `make venv` if you have 3.14
 source .venv/bin/activate
 pip install -e ".[dev]"
+# Note: the `dev`/`observability` extras in pyproject.toml are currently
+# missing their [project.optional-dependencies] table header, so `[dev]`
+# doesn't install as a distinct extra — but every dev package (pytest,
+# ruff, honcho, respx) is already duplicated in the base `dependencies`
+# list, so nothing is actually missing from this command.
 
 # 2. (Optional) Install RAG extras for ChromaDB + embeddings
 pip install -e ".[rag]"
@@ -30,17 +42,45 @@ cp .env.example .env
 
 # 4. Start Redis
 make up
+# ChromaDB is NOT a separate container — it runs embedded (PersistentClient)
+# by default (CHROMADB_MODE=embedded), so `make up` only starts Redis.
 
 # 5. Run backend
 make run
 # API now at http://localhost:8000
+curl http://localhost:8000/health   # should return {"status":"healthy"}
 
 # 6. (Later) Run dashboard
 cd dashboard
 npm install
 npm run dev
-# Dashboard at http://localhost:5173
+# Dashboard at http://localhost:5173 (Vite dev server proxies /api -> :8000)
+
+# 7. Run the test suite
+cd ..
+pytest -q   # or: make test
+# 112 tests should pass. Tests live in tests_local/, not tests/.
 ```
+
+### Installation checklist
+
+Use this to confirm a from-scratch setup is actually working, not just that
+commands ran without error:
+
+- [ ] `.venv` created with Python 3.12+; `python -c "import sys; print(sys.version)"` confirms it
+- [ ] `pip install -e ".[dev]"` completed; `.venv/bin/pytest`, `.venv/bin/ruff`, `.venv/bin/uvicorn`, `.venv/bin/honcho` all exist
+- [ ] `.env` copied from `.env.example` and filled in: at minimum one LLM key (`LLM_API_KEY` for DeepSeek, or `ANTHROPIC_API_KEY`/`OPENAI_API_KEY` if you switched provider) and `GITHUB_TOKEN`
+- [ ] `make up` succeeded and `docker ps` shows a healthy `redis` container on port 6379
+- [ ] `make run` succeeded; `curl http://localhost:8000/health` returns `{"status":"healthy"}` and `/ready` returns `{"status":"ready",...}`
+- [ ] `cd dashboard && npm install && npm run dev` succeeded; http://localhost:5173 loads and its network tab shows `/api/v1/reviews` returning `200` (proxy to the backend working)
+- [ ] `pytest -q` (from repo root) reports `112 passed`, not a collection error — if you see "No files were found in testpaths," check `pyproject.toml`'s `testpaths` still points at `tests_local`, not `tests`
+- [ ] (Optional, only if exposing this publicly) `API_KEY` set in `.env` — gates `POST /reviews`, fix approve/reject/apply, and test-run endpoints behind an `X-API-Key` header; leave unset for local dev
+- [ ] (Optional) `make ingest` run and `pip install -e ".[rag]"` done, if you want live ChromaDB/OWASP RAG instead of the hardcoded security-knowledge fallback
+
+The `eval/`, `eval_PR/`, and `eval_harness/` subsystems are independent of the
+above and have their own setup — see [eval/README.md](eval/README.md),
+[eval_PR/README.md](eval_PR/README.md), and
+[eval_harness/eval_harness/README.md](eval_harness/eval_harness/README.md).
 
 ## Project Structure
 
@@ -306,6 +346,18 @@ Each agent:
 - Reload browser, check browser console
 - Verify review ID matches
 - Check logs for `sse_published` events
+
+**`pytest` reports "No files were found in testpaths" or errors importing `eval_harness`'s vendored dataset scripts?**
+- `pyproject.toml`'s `testpaths` must be `tests_local`, not `tests` — the latter doesn't exist and pytest silently falls back to scanning the whole repo, which sweeps in unrelated third-party files under `eval_harness/`
+
+**Dashboard's "Run Tests" button always says "no directory found — nothing to run"?**
+- That feature (`src/services/test_runner.py`) clones the PR's head branch and looks for a `tests_local/` directory in it — if the PR you're reviewing doesn't have tests there, this is correct behavior, not a bug
+
+**Getting `"Could not resolve authentication method"` when running something (e.g. `eval_harness`) from a directory other than the repo root?**
+- `Settings` loads `.env` from an absolute path anchored to the repo root, so this should no longer happen as of the fix in this session — if you still see it, confirm you're on a build that includes the `src/core/config.py` `_REPO_ROOT_ENV_FILE` fix
+
+**`make up` fails or nothing is listening on 6379?**
+- Confirm `docker-compose.yml` has a `redis` service defined (it does as of this session's fix) and `docker ps` shows `cap-pr-review-redis` healthy
 
 See [USER_FLOWS.md](docs/USER_FLOWS.md) for more details.
 

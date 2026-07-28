@@ -1,7 +1,10 @@
 import axios from 'axios'
 
+const apiKey = import.meta.env.VITE_API_KEY as string | undefined
+
 const api = axios.create({
   baseURL: '/api/v1',
+  headers: apiKey ? { 'X-API-Key': apiKey } : {},
 })
 
 export interface Review {

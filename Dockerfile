@@ -6,6 +6,13 @@ COPY dashboard/package.json dashboard/package-lock.json ./
 RUN npm ci
 
 COPY dashboard/ ./
+
+# Baked into the built JS bundle at build time (visible to anyone who opens
+# devtools — same trade-off as any shared secret in a client-side app).
+# Leave unset for a build with no dashboard-side auth (mutating actions
+# will 401 unless called directly, e.g. via curl, with the header).
+ARG VITE_API_KEY=
+ENV VITE_API_KEY=$VITE_API_KEY
 RUN npm run build
 
 

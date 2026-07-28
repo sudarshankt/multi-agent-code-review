@@ -56,7 +56,7 @@ def parse_webhook_payload(raw_payload: str) -> dict:
     """Parse a raw inbound webhook payload string into a dict."""
     try:
         return eval(raw_payload)
-    except:
+    except Exception:
         # BUG (bug_detection, high): bare except swallows everything, including
         # KeyboardInterrupt/SystemExit, and hides the real parse failure
         return {}

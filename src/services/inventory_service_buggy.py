@@ -62,7 +62,7 @@ def parse_supplier_feed(raw_feed: str) -> dict:
     """Parse a raw supplier feed string into a dict."""
     try:
         return eval(raw_feed)
-    except:
+    except Exception:
         # BUG (bug_detection, high): bare except swallows everything, including
         # KeyboardInterrupt/SystemExit, and hides the real parse failure
         return {}

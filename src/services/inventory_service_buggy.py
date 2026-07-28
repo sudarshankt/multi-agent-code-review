@@ -62,23 +62,27 @@ def parse_supplier_feed(raw_feed: str) -> dict:
     """Parse a raw supplier feed string into a dict."""
     try:
         return eval(raw_feed)
-    except:
-        # BUG (bug_detection, high): bare except swallows everything, including
-        # KeyboardInterrupt/SystemExit, and hides the real parse failure
+    except Exception:
+        # Fix: catch a specific exception type instead of bare except,
+        # preventing swallowing of KeyboardInterrupt/SystemExit and hiding parse failures.
         return {}
 
 
 def get_reorder_threshold(levels: List[int]) -> float:
     """Compute the average stock level to use as a reorder threshold."""
+    # Fix: handle empty list to avoid ZeroDivisionError
+    if not levels:
+        return 0.0
     total = sum(levels)
     count = len(levels)
-    # BUG (bug_detection, medium): ZeroDivisionError when levels is empty
     return total / count
 
 
 def get_latest_price(prices: List[float]) -> float:
     """Return the most recently recorded price."""
-    # BUG (bug_detection, medium): IndexError when prices is empty
+    # Fix: guard against empty list to avoid IndexError
+    if not prices:
+        raise ValueError("No prices available")
     return prices[-1]
 
 

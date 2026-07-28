@@ -43,8 +43,11 @@ COPY knowledge_base/ knowledge_base/
 # Deploy configs (nginx + supervisor)
 COPY deploy/ deploy/
 
-# Eval
+# Eval (finding_eval's security golden samples live under tests_local/test_data/,
+# not eval/ — without this, the eval matrix's security run 500s on a
+# FileNotFoundError since the manifest points at a path that doesn't exist)
 COPY eval/ eval/
+COPY tests_local/ tests_local/
 
 # Frontend static build from stage 1
 COPY --from=frontend-build /build/dist /app/static
